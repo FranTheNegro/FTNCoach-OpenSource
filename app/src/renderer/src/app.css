@@ -1,0 +1,66 @@
+@import '../ui/tokens.css';
+@import 'tailwindcss';
+
+/* Solo existen los colores de la marca: los de Tailwind por defecto están desactivados. */
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-ultramar: var(--ftn-ultramar);
+  --color-ultramar-hover: var(--ftn-ultramar-hover);
+  --color-cobalto: var(--ftn-cobalto);
+  --color-azul: var(--ftn-azul);
+  --color-plata: var(--ftn-plata);
+  --color-blanco: var(--ftn-blanco);
+  --color-carbono: var(--ftn-carbono);
+  --color-carbono-2: var(--ftn-carbono-2);
+  --color-grafito: var(--ftn-grafito);
+  --color-acero: var(--ftn-acero);
+  --color-niebla: var(--ftn-niebla);
+  --color-mejor: var(--ftn-mejor);
+  --color-record: var(--ftn-record);
+  --color-alerta: var(--ftn-alerta);
+  --color-error: var(--ftn-error);
+
+  --font-display: var(--ftn-font-display);
+  --font-ui: var(--ftn-font-ui);
+  --font-data: var(--ftn-font-data);
+
+  --radius-chip: var(--ftn-radius-chip);
+  --radius-control: var(--ftn-radius-control);
+  --radius-card: var(--ftn-radius-card);
+  --radius-panel: var(--ftn-radius-panel);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ftn-carbono);
+  color: var(--ftn-blanco);
+  font-family: var(--ftn-font-ui);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.data {
+  font-family: var(--ftn-font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* La barra de título es la zona superior de la ventana (los botones nativos van a la derecha). */
+.drag {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ftn-azul);
+  outline-offset: 2px;
+}

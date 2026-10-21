@@ -1,0 +1,25 @@
+# Datos locales y .env
+data/
+.env
+*.env
+__pycache__/
+.venv/
+
+# Build
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+
+# npm suelto en la raíz (la app vive en app/)
+/package-lock.json
+/node_modules/
+
+# Skills de agentes (se reinstalan con los comandos de AGENTS.md)
+.claude/skills/

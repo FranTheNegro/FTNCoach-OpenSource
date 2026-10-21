@@ -1,0 +1,26 @@
+appId: com.ftncoach.app
+productName: FTN Coach
+copyright: FTN Coach — open source (MIT)
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**
+  - resources/icon.png
+  - resources/ac-app/**
+  - package.json
+# koffi carga su binario nativo desde disco: no puede quedar dentro del asar
+asarUnpack:
+  - node_modules/koffi/**
+  - node_modules/@koromix/**
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: resources/icon.png
+nsis:
+  # Instalación de un clic, por usuario (sin pedir administrador)
+  oneClick: true
+  perMachine: false
+  artifactName: FTN-Coach-Setup-${version}.${ext}
+  shortcutName: FTN Coach

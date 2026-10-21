@@ -1,0 +1,42 @@
+/*
+ * FTN Coach — tokens de marca.
+ *
+ * Fuentes OFL del manual, empaquetadas (sin internet): Archivo (display),
+ * Hanken Grotesk (interfaz) y JetBrains Mono (datos). Las fuentes comerciales
+ * del manual (Monument Extended, Söhne, Berkeley Mono) no se redistribuyen en el
+ * proyecto open source.
+ */
+@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource-variable/hanken-grotesk';
+@import '@fontsource-variable/jetbrains-mono';
+
+:root {
+  --ftn-ultramar: #1d2be0;
+  --ftn-ultramar-hover: #2b39f0;
+  --ftn-cobalto: #14238f;
+  --ftn-azul: #5b7bff;
+  --ftn-plata: #c3c8d2;
+  --ftn-blanco: #f0f3fa;
+  --ftn-carbono: #12151a;
+
+  --ftn-carbono-2: #1e2229;
+  --ftn-grafito: #2c313a;
+  --ftn-acero: #3a404b;
+  --ftn-niebla: #8e96a3;
+
+  --ftn-mejor: #b77cff;
+  --ftn-record: #34d399;
+  --ftn-alerta: #ffb020;
+  --ftn-error: #ff5c5c;
+
+  --ftn-font-display: 'Archivo Variable', 'Arial Black', sans-serif;
+  --ftn-font-ui: 'Hanken Grotesk Variable', 'Helvetica Neue', sans-serif;
+  --ftn-font-data: 'JetBrains Mono Variable', ui-monospace, monospace;
+
+  --ftn-radius-chip: 6px;
+  --ftn-radius-control: 10px;
+  --ftn-radius-card: 14px;
+  --ftn-radius-panel: 20px;
+
+  color-scheme: dark;
+}

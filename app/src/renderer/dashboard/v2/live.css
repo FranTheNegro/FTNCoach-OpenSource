@@ -1,0 +1,751 @@
+/*
+ * Dashboard v2 (tablet 1280 × 800). El diseño se arma sobre un escenario que escala
+ * al tamaño real de la pantalla; el ancho y el alto del escenario crecen si la
+ * pantalla tiene otra proporción, así llena todo sin barras.
+ * Todo con prefijo d2- para no chocar con dashboard.css (Inputs y Mapa).
+ */
+
+.d2-viewport {
+  position: fixed;
+  inset: 0;
+  background: var(--ftn-carbono);
+  overflow: hidden;
+}
+
+.d2-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center;
+  box-sizing: border-box;
+  padding: 20px;
+  display: grid;
+  grid-template-rows: 64px minmax(0, 1fr) 72px;
+  gap: 16px;
+  background: var(--ftn-carbono);
+  color: var(--ftn-blanco);
+  font-family: var(--ftn-font-ui);
+  overflow: hidden;
+}
+
+.d2-stage button {
+  font-family: inherit;
+  color: inherit;
+}
+
+.d2-mono {
+  font-family: var(--ftn-font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.d2-lbl {
+  font-family: var(--ftn-font-data);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ftn-niebla);
+  white-space: nowrap;
+}
+
+.d2-display {
+  font-family: var(--ftn-font-display);
+  font-weight: 900;
+  font-stretch: 125%;
+  font-variation-settings: 'wdth' 125;
+  transform: skewX(-10deg);
+  display: block;
+}
+
+/* ── Barra superior ─────────────────────────────────────────────────── */
+
+.d2-head {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+
+.d2-sim {
+  height: 48px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ftn-carbono-2);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.d2-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.d2-head-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.d2-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ftn-font-data);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ftn-niebla);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.d2-iconbtn {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--ftn-grafito);
+  background: transparent;
+  color: var(--ftn-plata);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.d2-iconbtn:active {
+  background: var(--ftn-carbono-2);
+}
+
+/* ── Chips ──────────────────────────────────────────────────────────── */
+
+.d2-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--ftn-radius-chip);
+  font-family: var(--ftn-font-data);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  background: var(--ftn-grafito);
+  color: var(--ftn-plata);
+}
+.d2-chip.highlight {
+  background: var(--ftn-cobalto);
+  color: #fff;
+}
+.d2-chip.best {
+  background: color-mix(in srgb, var(--ftn-mejor) 15%, transparent);
+  color: var(--ftn-mejor);
+}
+.d2-chip.record {
+  background: color-mix(in srgb, var(--ftn-record) 15%, transparent);
+  color: var(--ftn-record);
+}
+.d2-chip.alert {
+  background: color-mix(in srgb, var(--ftn-alerta) 15%, transparent);
+  color: var(--ftn-alerta);
+}
+.d2-chip.error {
+  background: color-mix(in srgb, var(--ftn-error) 15%, transparent);
+  color: var(--ftn-error);
+}
+.d2-chip.info {
+  background: color-mix(in srgb, var(--ftn-azul) 15%, transparent);
+  color: var(--ftn-azul);
+}
+
+/* ── Paneles ────────────────────────────────────────────────────────── */
+
+.d2-body {
+  display: grid;
+  gap: 16px;
+  min-height: 0;
+}
+
+.d2-colv {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.d2-panel {
+  background: var(--ftn-carbono-2);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: var(--ftn-radius-card);
+  padding: 16px 18px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.d2-panel.fill {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.d2-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.d2-tile {
+  background: var(--ftn-carbono);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.d2-grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.d2-bar {
+  height: 4px;
+  background: var(--ftn-grafito);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.d2-bar > i {
+  display: block;
+  height: 100%;
+}
+
+.d2-progress {
+  height: 8px;
+  background: var(--ftn-grafito);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.d2-progress > i {
+  display: block;
+  height: 100%;
+  background: var(--ftn-azul);
+}
+
+.d2-sep {
+  border-top: 1px solid var(--ftn-grafito);
+}
+
+/* ── En vivo ────────────────────────────────────────────────────────── */
+
+.d2-live {
+  grid-template-columns: 310px minmax(0, 1fr) 320px;
+}
+
+.d2-clock {
+  font-weight: 700;
+  font-size: 52px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.d2-deltabar {
+  position: relative;
+  height: 16px;
+  background: var(--ftn-carbono);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.d2-deltabar > b {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 3px;
+}
+.d2-deltabar > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ftn-plata);
+}
+
+.d2-ref {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--ftn-grafito);
+}
+
+.d2-hero {
+  flex: 1;
+  min-height: 0;
+  background: var(--ftn-carbono-2);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: var(--ftn-radius-panel);
+  padding: 18px 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+.d2-hero.flash {
+  animation: d2-border 160ms steps(1) infinite;
+}
+.d2-hero.flash.fast {
+  animation-duration: 100ms;
+}
+
+/* Luces de cambio */
+.d2-lights {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 44px;
+  padding: 0 6px;
+}
+.d2-lights i {
+  flex: 1;
+  border-radius: 2px;
+  background: var(--ftn-grafito);
+  transform: skewX(-10deg);
+}
+.d2-lights i.b {
+  background: var(--ftn-azul);
+}
+.d2-lights i.w {
+  background: var(--ftn-blanco);
+}
+.d2-lights i.y {
+  background: var(--ftn-alerta);
+}
+.d2-lights i.r {
+  background: var(--ftn-error);
+}
+.d2-lights.flash i {
+  animation: d2-lights 160ms steps(1) infinite;
+}
+.d2-lights.flash.fast i {
+  animation-duration: 100ms;
+}
+
+@keyframes d2-lights {
+  0% {
+    background: var(--ftn-mejor);
+  }
+  50% {
+    background: var(--ftn-ultramar);
+  }
+}
+@keyframes d2-border {
+  0% {
+    border-color: var(--ftn-mejor);
+  }
+  50% {
+    border-color: var(--ftn-ultramar);
+  }
+}
+
+.d2-gearrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.d2-gear {
+  font-size: 176px;
+  line-height: 0.92;
+  padding: 0 8px;
+  min-width: 120px;
+  text-align: center;
+}
+
+.d2-pedals {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+}
+.d2-pedal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.d2-pedal > div {
+  position: relative;
+  width: 40px;
+  height: 88px;
+  background: var(--ftn-carbono);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.d2-pedal > div > i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.d2-trace {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.d2-trace > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: var(--ftn-carbono);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+.d2-trace > span {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.d2-rivals2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  height: 72px;
+}
+.d2-rival {
+  border: 1px solid var(--ftn-grafito);
+  border-radius: var(--ftn-radius-card);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.d2-coach {
+  background: var(--ftn-carbono-2);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: var(--ftn-radius-card);
+  padding: 0 18px;
+  height: 64px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.d2-bb {
+  position: relative;
+  height: 6px;
+  background: var(--ftn-grafito);
+  border-radius: 3px;
+  margin-top: 3px;
+}
+.d2-bb > b {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--ftn-azul);
+  border-radius: 3px;
+}
+.d2-bb > span {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ftn-blanco);
+}
+
+/* ── Navegación ─────────────────────────────────────────────────────── */
+
+.d2-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.d2-tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 22px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ftn-niebla);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.d2-tab[aria-selected='true'] {
+  background: var(--ftn-carbono-2);
+  border-color: var(--ftn-grafito);
+  color: var(--ftn-blanco);
+}
+.d2-tab[aria-selected='true'] svg {
+  color: var(--ftn-azul);
+}
+.d2-nav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.d2-flag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ftn-font-data);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ftn-plata);
+  white-space: nowrap;
+}
+
+/* ── Coche ──────────────────────────────────────────────────────────── */
+
+.d2-car {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.d2-tyres {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.d2-tyre {
+  background: var(--ftn-carbono);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.d2-zones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.d2-zones > div {
+  background: var(--ftn-carbono-2);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: 8px;
+  padding: 5px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.d2-carbody {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  background: var(--ftn-carbono);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 0;
+  gap: 8px;
+  box-sizing: border-box;
+  min-height: 0;
+}
+.d2-bbv {
+  position: relative;
+  width: 34px;
+  background: var(--ftn-carbono-2);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: 10px;
+}
+.d2-bbv > i {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  background: var(--ftn-azul);
+  border-radius: 6px;
+}
+.d2-bbv > u {
+  position: absolute;
+  height: 1px;
+  margin-top: -0.5px;
+  left: -7px;
+  right: -7px;
+  background: var(--ftn-acero);
+}
+.d2-bbv > b {
+  position: absolute;
+  left: -10px;
+  right: -10px;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  background: var(--ftn-blanco);
+  border-radius: 2px;
+}
+.d2-rowline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid var(--ftn-grafito);
+}
+
+/* ── Vueltas ────────────────────────────────────────────────────────── */
+
+.d2-laps {
+  grid-template-columns: minmax(0, 1fr) 460px;
+}
+.d2-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.d2-kpi {
+  background: var(--ftn-carbono-2);
+  border: 1px solid var(--ftn-grafito);
+  border-radius: var(--ftn-radius-card);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.d2-lapgrid {
+  display: grid;
+  grid-template-columns: 56px 118px repeat(3, minmax(0, 1fr)) 96px 112px;
+  gap: 8px;
+  align-items: center;
+}
+.d2-laprow {
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border-top: 1px solid var(--ftn-grafito);
+}
+.d2-chart {
+  position: relative;
+  height: 190px;
+}
+.d2-chart > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.d2-chart > .t {
+  position: absolute;
+  font-family: var(--ftn-font-data);
+  font-size: 10px;
+  color: var(--ftn-niebla);
+}
+
+/* ── Rivales ────────────────────────────────────────────────────────── */
+
+.d2-riv {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.d2-rivgrid {
+  display: grid;
+  grid-template-columns: 56px 64px minmax(0, 1fr) 84px 112px 100px 112px;
+  gap: 8px;
+  align-items: center;
+}
+.d2-rivrow {
+  height: 48px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border-top: 1px solid var(--ftn-grafito);
+}
+
+/* ── Mensajes ───────────────────────────────────────────────────────── */
+
+.d2-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--ftn-niebla);
+  font-size: 15px;
+  padding: 24px;
+}
+.d2-empty strong {
+  color: var(--ftn-blanco);
+  font-size: 18px;
+}
+
+/* Inputs */
+.d2-inputs {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.d2-canvasbox {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+.d2-canvasbox canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Mapa */
+.d2-map {
+  grid-template-columns: minmax(0, 1fr) 330px;
+}
+.d2-map .map-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Menú de opciones dentro del escenario */
+.d2-stage .menu {
+  right: 20px;
+  bottom: 92px;
+}
+.d2-stage .overlay {
+  border-radius: var(--ftn-radius-card);
+}

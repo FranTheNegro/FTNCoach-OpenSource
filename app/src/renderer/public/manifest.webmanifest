@@ -1,0 +1,10 @@
+{
+  "name": "FTN Coach",
+  "short_name": "FTN Coach",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#12151A",
+  "theme_color": "#12151A",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
