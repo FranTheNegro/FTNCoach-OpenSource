@@ -15,6 +15,7 @@ import { SetupView } from './SetupView'
 import { VideoTab } from './VideoTab'
 import { MapPanel } from './MapPanel'
 import { keyPoints } from './keyPoints'
+import { PracticePlanCard, SetupCompare, StintsPanel } from './Practice'
 import { CornersTable } from './CornersTable'
 import { LapChart } from './LapChart'
 import { sessionLabel } from '@shared/events'
@@ -261,6 +262,13 @@ export function SessionDetailView({
   const refLabel = `V${d.laps[ref.index]?.lap}`
 
 
+  const zoomCorner = (id: number) => {
+    const c = d.corners.find((x) => x.id === id)
+    const n = d.distM.length
+    if (c) setRange([Math.max(0, Math.round(c.startPct * (n - 1)) - Math.round(n * 0.01)), Math.min(n - 1, Math.round(c.endPct * (n - 1)) + Math.round(n * 0.01))])
+    setTab('analysis')
+  }
+
   const tabs: [Tab, string][] = [
     ['analysis', 'Análisis'],
     ['corners', 'Curvas'],
@@ -378,19 +386,10 @@ export function SessionDetailView({
         />
       )}
       {tab === 'corners' && (
-        <CornersTable
-          d={d}
-          lapA={lapA}
-          refLap={ref.kind === 'lap' ? ref.index : null}
-          labelA={`V${A?.lap}`}
-          refLabel={refLabel}
-          onZoom={(id) => {
-            const c = d.corners.find((x) => x.id === id)
-            const n = d.distM.length
-            if (c) setRange([Math.max(0, Math.round(c.startPct * (n - 1)) - Math.round(n * 0.01)), Math.min(n - 1, Math.round(c.endPct * (n - 1)) + Math.round(n * 0.01))])
-            setTab('analysis')
-          }}
-        />
+        <div className="flex flex-col gap-4">
+          <CornersTable d={d} lapA={lapA} refLap={ref.kind === 'lap' ? ref.index : null} labelA={`V${A?.lap}`} refLabel={refLabel} onZoom={zoomCorner} />
+          <PracticePlanCard d={d} onZoom={zoomCorner} />
+        </div>
       )}
       {tab === 'laps' && (
         <div className="flex flex-col gap-4">
@@ -410,6 +409,7 @@ export function SessionDetailView({
               setTab('analysis')
             }}
           />
+          <StintsPanel d={d} />
         </div>
       )}
       {tab === 'gg' &&
@@ -419,7 +419,12 @@ export function SessionDetailView({
           <p className="text-plata">Comparando…</p>
         ))}
       {tab === 'video' && <VideoTab sessionId={summary.id} d={d} />}
-      {tab === 'setup' && <SetupView setup={d.setup} />}
+      {tab === 'setup' && (
+        <div className="flex flex-col gap-5">
+          <SetupCompare d={d} />
+          <SetupView setup={d.setup} />
+        </div>
+      )}
       {tab === 'coach' && <CoachPanel sessionId={summary.id} lap={lapA} lapLabel={A ? `V${A.lap}` : ''} />}
     </div>
   )
