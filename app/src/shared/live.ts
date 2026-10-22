@@ -9,6 +9,8 @@
  * Subir PROTOCOL_VERSION ante cualquier cambio incompatible en los mensajes.
  */
 
+import type { CarCategory } from './category'
+
 export const PROTOCOL_VERSION = 3
 
 export type SimId = 'iracing' | 'ac' | 'replay'
@@ -156,6 +158,8 @@ export interface SessionMeta {
   blinkRpm: number | null
   maxRpm: number | null
   fuelMaxL: number | null
+  /** Categoría del auto (para el layout automático del dashboard). */
+  category?: CarCategory | null
 }
 
 export type LapKind = 'valid' | 'out_lap' | 'in_lap' | 'off_track' | 'incident' | 'partial'

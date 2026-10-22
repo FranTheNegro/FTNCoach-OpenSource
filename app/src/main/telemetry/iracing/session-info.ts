@@ -8,6 +8,7 @@
  */
 import { parse } from 'yaml'
 import type { Conditions, SetupGroup } from '@shared/analysis'
+import { detectCategory } from '@shared/category'
 import type { SessionMeta, SimId } from '@shared/live'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -145,6 +146,12 @@ export function metaFromSessionInfo(info: SessionInfo, sim: SimId, sessionNum: n
     blinkRpm: num(di.DriverCarSLBlinkRPM),
     maxRpm: num(di.DriverCarRedLine),
     fuelMaxL: fuelMax !== null ? fuelMax * (fuelPct ?? 1) : null,
+    category: detectCategory({
+      name: String(me?.CarScreenName ?? ''),
+      id: me?.CarPath ? String(me.CarPath) : null,
+      cls: me?.CarClassShortName ? String(me.CarClassShortName) : null,
+      trackCategory: w.Category ? String(w.Category) : 'Road',
+    }),
   }
 }
 

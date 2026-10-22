@@ -2,7 +2,11 @@
  * Assetto Corsa en vivo: lee las páginas `acpmf_physics`, `acpmf_graphics` y
  * `acpmf_static` que publica el juego. No hace falta instalar ninguna app en AC.
  */
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { detectCategory, type CarCategory } from '@shared/category'
 import type { Flag, Quad, SessionMeta, Triple } from '@shared/live'
+import { findAcRoot } from '../../analysis/track-map/ac'
 import { SharedMemory } from '../win32'
 import type { RawSample, TelemetrySource } from '../types'
 import { AC_FLAG, AC_SESSION, AC_STATUS, GRAPHICS, PHYSICS, STATIC, f32, i32, wstr, type Field } from './structs'
@@ -47,6 +51,22 @@ function flagOf(code: number): Flag[] {
     default:
       return []
   }
+}
+
+/** Categoría del auto con su ui_car.json (clase y tags), como la app de AC. */
+function acCategory(carId: string): CarCategory {
+  let cls: string | null = null
+  let tags: string[] = []
+  const root = carId ? findAcRoot() : null
+  const file = root ? join(root, 'content', 'cars', carId, 'ui', 'ui_car.json') : null
+  if (file && existsSync(file)) {
+    // Muchos ui_car.json no son JSON válido (comas de más, saltos de línea): se leen con regex
+    const text = readFileSync(file, 'utf8')
+    cls = /"class"\s*:\s*"([^"]*)"/.exec(text)?.[1] ?? null
+    const list = /"tags"\s*:\s*\[([^\]]*)\]/.exec(text)?.[1] ?? ''
+    tags = [...list.matchAll(/"([^"]*)"/g)].map((m) => m[1].replace(/^#/, ''))
+  }
+  return detectCategory({ name: prettyId(carId), id: carId, cls, tags })
 }
 
 const validMs = (ms: number): number | null => (ms > 0 && ms < 3_600_000 ? ms / 1000 : null)
@@ -128,6 +148,7 @@ export class AcLive implements TelemetrySource {
       blinkRpm: maxRpm > 0 ? maxRpm * 0.985 : null,
       maxRpm: maxRpm > 0 ? maxRpm : null,
       fuelMaxL: f32(this.stat, STATIC.maxFuel) || null,
+      category: acCategory(car),
     }
   }
 

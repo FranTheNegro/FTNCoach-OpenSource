@@ -12,6 +12,7 @@ import { Laps } from './v2/Laps'
 import { Live } from './v2/Live'
 import { Rivals } from './v2/Rivals'
 import { C, Chip, Ico, Stage } from './v2/kit'
+import { applySkin, layoutFor, LAYOUT_IDS, LAYOUTS, SKIN_IDS, SKINS } from './v2/layouts'
 import { DashTracker } from './v2/tracker'
 
 const PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
@@ -64,6 +65,8 @@ export function App() {
   const [keepAwake, setKeepAwake] = useState(true)
   const wakeSupported = useWakeLock(keepAwake)
   const swipe = useRef<{ x: number; y: number } | null>(null)
+
+  useEffect(() => applySkin(prefs.skin), [prefs.skin])
 
   const f = live.frame
   const status = live.status
@@ -119,6 +122,8 @@ export function App() {
   }
 
   const meta = live.meta
+  const detected = layoutFor(meta?.category)
+  const layout = prefs.layoutAuto ? detected : prefs.layout
   const flag = f ? flagLabel(f.flags) : null
   const simName = connectedToSim && status?.sim ? SIM_LABEL[status.sim] : live.connected ? 'Sin simulador' : 'Sin conexión'
 
@@ -170,7 +175,7 @@ export function App() {
         onPointerUp={onPointerUp}
         onPointerCancel={() => (swipe.current = null)}
       >
-        {f && prefs.page === 'live' && <Live f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} history={client.history} />}
+        {f && prefs.page === 'live' && <Live f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} history={client.history} layout={layout} />}
         {f && prefs.page === 'car' && <Car f={f} meta={meta} units={prefs.units} />}
         {f && prefs.page === 'laps' && <Laps f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} />}
         {f && prefs.page === 'rivals' && <Rivals f={f} meta={meta} tracker={tracker} />}
@@ -212,6 +217,31 @@ export function App() {
             <span>Pantalla siempre encendida</span>
             <span>{!wakeSupported ? 'Configurala en la tablet' : keepAwake ? 'Sí' : 'No'}</span>
           </button>
+          <div className="menu-section">
+            <span className="menu-title">Layout de En vivo</span>
+            <button onClick={() => setPrefs({ layoutAuto: !prefs.layoutAuto, layout })}>
+              <span>Automático según el auto</span>
+              <span>{prefs.layoutAuto ? `Sí · ${LAYOUTS[detected].name}` : 'No'}</span>
+            </button>
+            <div className="menu-choices">
+              {LAYOUT_IDS.map((id) => (
+                <button key={id} aria-pressed={layout === id} onClick={() => setPrefs({ layoutAuto: false, layout: id })} title={LAYOUTS[id].hint}>
+                  {LAYOUTS[id].name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="menu-section">
+            <span className="menu-title">Skin</span>
+            <div className="menu-choices">
+              {SKIN_IDS.map((id) => (
+                <button key={id} aria-pressed={prefs.skin === id} onClick={() => setPrefs({ skin: id })}>
+                  <i className="menu-swatch" style={{ background: SKINS[id].vars['--ftn-carbono-2'] ?? '#1e2229', borderColor: SKINS[id].vars['--ftn-acero'] ?? '#3a404b' }} />
+                  {SKINS[id].name}
+                </button>
+              ))}
+            </div>
+          </div>
           <button onClick={() => setMenu(false)}>
             <span>Cerrar</span>
             <span />

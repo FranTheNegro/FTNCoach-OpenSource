@@ -1,6 +1,7 @@
 /** Preferencias de cada dispositivo (la tablet puede usar mph aunque la PC use km/h). */
 import { useCallback, useState } from 'react'
 import type { Units } from '@shared/api'
+import { LAYOUT_IDS, SKIN_IDS, type LayoutId, type SkinId } from './v2/layouts'
 
 export const PAGE_IDS = ['live', 'car', 'laps', 'rivals', 'inputs', 'map'] as const
 export type PageId = (typeof PAGE_IDS)[number]
@@ -8,17 +9,32 @@ export type PageId = (typeof PAGE_IDS)[number]
 export interface Prefs {
   units: Units
   page: PageId
+  /** El layout de "En vivo" sigue la categoría del auto. */
+  layoutAuto: boolean
+  /** Layout elegido a mano (cuando no es automático). */
+  layout: LayoutId
+  skin: SkinId
 }
 
 const KEY = 'ftn.dashboard.prefs'
-const DEFAULTS: Prefs = { units: 'metric', page: 'live' }
+const DEFAULTS: Prefs = { units: 'metric', page: 'live', layoutAuto: true, layout: 'gt', skin: 'ftn' }
+
+function pick<T extends string>(list: readonly T[], v: unknown, fallback: T): T {
+  return list.includes(v as T) ? (v as T) : fallback
+}
 
 function load(): Prefs {
   try {
     const stored = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Prefs>
     // Versiones anteriores guardaban 'race': se vuelve a la pantalla principal
-    const page = PAGE_IDS.includes(stored.page as PageId) ? (stored.page as PageId) : DEFAULTS.page
-    return { ...DEFAULTS, ...stored, page }
+    return {
+      ...DEFAULTS,
+      ...stored,
+      page: pick(PAGE_IDS, stored.page, DEFAULTS.page),
+      layout: pick(LAYOUT_IDS, stored.layout, DEFAULTS.layout),
+      skin: pick(SKIN_IDS, stored.skin, DEFAULTS.skin),
+      layoutAuto: typeof stored.layoutAuto === 'boolean' ? stored.layoutAuto : DEFAULTS.layoutAuto,
+    }
   } catch {
     return DEFAULTS
   }

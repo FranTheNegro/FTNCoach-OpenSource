@@ -255,6 +255,45 @@
   grid-template-columns: 310px minmax(0, 1fr) 320px;
 }
 
+/* Fórmula: la conducción al centro, más ancha */
+.d2-live.d2-formula {
+  grid-template-columns: 290px minmax(0, 1fr) 290px;
+}
+
+/* Óvalo: rivales más altos */
+.d2-live.d2-oval {
+  grid-template-columns: 320px minmax(0, 1fr) 300px;
+}
+.d2-rivals2.big {
+  height: 120px;
+}
+.d2-rivals2.big .d2-mono {
+  font-size: 40px !important;
+}
+
+/* Rally: simple y opaco. Paneles planos, sin bordes, y la marcha protagonista */
+.d2-live.d2-simple {
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+.d2-simple .d2-panel,
+.d2-simple .d2-hero,
+.d2-simple .d2-coach,
+.d2-simple .d2-tile {
+  border-color: transparent;
+}
+.d2-simple .d2-hero {
+  background: var(--ftn-carbono-2);
+}
+.d2-simple .d2-gear {
+  font-size: 230px;
+}
+.d2-simple .d2-lights {
+  height: 56px;
+}
+.d2-simple .d2-lbl {
+  opacity: 0.7;
+}
+
 .d2-clock {
   font-weight: 700;
   font-size: 52px;

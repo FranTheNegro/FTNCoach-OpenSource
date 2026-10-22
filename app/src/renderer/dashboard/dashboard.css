@@ -778,6 +778,57 @@ body,
   color: var(--ftn-niebla);
 }
 
+.menu {
+  max-height: calc(100% - 120px);
+  overflow-y: auto;
+  width: 380px;
+}
+
+.menu-section {
+  border-top: 1px solid var(--ftn-grafito);
+  padding: 10px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-title {
+  font-family: var(--ftn-font-data);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ftn-niebla);
+  padding: 0 8px;
+}
+
+.menu-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.menu .menu-choices button {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--ftn-grafito);
+}
+
+.menu .menu-choices button[aria-pressed='true'] {
+  border-color: var(--ftn-azul);
+  background: var(--ftn-carbono);
+}
+
+.menu-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid;
+  flex: none;
+}
+
 /* ── Página Mapa ──────────────────────────────────────────────────────── */
 
 .map-page {
