@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { detectCategory, type CarCategory } from '@shared/category'
 import type { Flag, Quad, SessionMeta, Triple } from '@shared/live'
 import { findAcRoot } from '../../analysis/track-map/ac'
-import { SharedMemory } from '../win32'
+import { SharedMemory, isProcessRunning } from '../win32'
 import type { RawSample, TelemetrySource } from '../types'
 import { AC_FLAG, AC_SESSION, AC_STATUS, GRAPHICS, PHYSICS, STATIC, f32, i32, wstr, type Field } from './structs'
 
@@ -94,9 +94,12 @@ export class AcLive implements TelemetrySource {
     const p = SharedMemory.open('Local\\acpmf_physics')
     const g = p && SharedMemory.open('Local\\acpmf_graphics')
     const s = g && SharedMemory.open('Local\\acpmf_static')
-    if (!p || !g || !s) {
+    // Assetto Corsa Rally publica las mismas páginas, pero con el formato de ACC:
+    // leído como AC1 da coordenadas, bandera y temperaturas sin sentido
+    if (!p || !g || !s || isProcessRunning('acr.exe')) {
       p?.close()
       g?.close()
+      s?.close()
       return null
     }
     const src = new AcLive(p, g, s)

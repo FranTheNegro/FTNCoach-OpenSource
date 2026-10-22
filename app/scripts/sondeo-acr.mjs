@@ -6,14 +6,16 @@
  *   node scripts/sondeo-acr.mjs --grabar   además graba la pasada completa (Ctrl+C corta)
  *   node scripts/sondeo-acr.mjs --todas    lista todas las memorias con nombre, no solo las de Kunos
  *
- * Cada página se decodifica con dos formatos: el de AC1 (el que usa la app) y el de
- * ACC. Physics y static son iguales al principio en los dos; graphics cambia desde
- * `normalizedCarPosition` (ACC agrega `activeCars` y las coordenadas de 60 autos),
- * así que mirando cuál da una posición y una bandera coherentes se sabe el formato.
+ * ACR publica `Local\acpmf_*` con el formato de ACC (los nombres están en acr.exe y
+ * live-telemetry-evo lo lee con los structs de ACC: physics de 800 bytes idéntico).
+ * Diferencias conocidas: temperaturas en Kelvin, wheelLoad publicado, sin camber,
+ * rideHeight ni temperaturas I/M/O, y la página static en ceros hasta entrar al tramo.
+ * Lo que nadie documentó es graphics en un tramo (posición, distancia, parciales):
+ * eso es lo que este sondeo muestra primero.
  *
- * La grabación (sondeo-acr-<fecha>.jsonl) guarda cada muestra a 20 Hz con los dos
- * formatos y los bytes crudos de las tres páginas: alcanza para mapear campos nuevos
- * y para registrar el trazado del tramo sin volver a correrlo.
+ * La grabación (sondeo-acr-<fecha>.jsonl) guarda cada muestra a 20 Hz decodificada y
+ * con los bytes crudos de physics y graphics: alcanza para mapear campos nuevos y
+ * para registrar el trazado del tramo sin volver a correrlo.
  */
 import koffi from 'koffi'
 import { writeFileSync, appendFileSync } from 'node:fs'
@@ -99,7 +101,7 @@ function openPage(name) {
   } }
 }
 
-// ── Formatos ───────────────────────────────────────────────────────────────
+// ── Formato de ACC ─────────────────────────────────────────────────────────
 
 function layout(fields) {
   const out = {}
@@ -115,7 +117,8 @@ function layout(fields) {
   return out
 }
 
-function decode(b, lay) {
+/** Decodifica una página. Los arreglos se recortan a 12 valores, salvo los de `full`. */
+function decode(b, lay, full = new Set()) {
   const o = {}
   for (const [name, f] of Object.entries(lay)) {
     if (f.off + (f.kind === 'w' ? 2 : 4) * f.count > b.length) continue
@@ -124,12 +127,14 @@ function decode(b, lay) {
       o[name] = s.slice(0, Math.max(0, s.indexOf('\0') >= 0 ? s.indexOf('\0') : s.length)).trim()
     } else {
       const rd = (i) => (f.kind === 'f' ? b.readFloatLE(f.off + i * 4) : b.readInt32LE(f.off + i * 4))
-      o[name] = f.count === 1 ? rd(0) : Array.from({ length: Math.min(f.count, 12) }, (_, i) => +rd(i).toFixed(3))
+      const n = full.has(name) ? f.count : Math.min(f.count, 12)
+      o[name] = f.count === 1 ? rd(0) : Array.from({ length: n }, (_, i) => +rd(i).toFixed(3))
     }
   }
   return o
 }
 
+// Structs de ACC (ACCSharedMemoryDocumentation v1.8.12), con los mismos nombres que live-telemetry-evo
 const PHYSICS = layout([
   ['packetId', 'i'], ['gas', 'f'], ['brake', 'f'], ['fuel', 'f'], ['gear', 'i'], ['rpms', 'i'], ['steerAngle', 'f'], ['speedKmh', 'f'],
   ['velocity', 'f[3]'], ['accG', 'f[3]'], ['wheelSlip', 'f[4]'], ['wheelLoad', 'f[4]'], ['wheelsPressure', 'f[4]'], ['wheelAngularSpeed', 'f[4]'],
@@ -139,38 +144,59 @@ const PHYSICS = layout([
   ['ballast', 'f'], ['airDensity', 'f'], ['airTemp', 'f'], ['roadTemp', 'f'], ['localAngularVel', 'f[3]'], ['finalFF', 'f'], ['performanceMeter', 'f'],
   ['engineBrake', 'i'], ['ersRecoveryLevel', 'i'], ['ersPowerLevel', 'i'], ['ersHeatCharging', 'i'], ['ersIsCharging', 'i'], ['kersCurrentKJ', 'f'],
   ['drsAvailable', 'i'], ['drsEnabled', 'i'], ['brakeTemp', 'f[4]'], ['clutch', 'f'], ['tyreTempI', 'f[4]'], ['tyreTempM', 'f[4]'], ['tyreTempO', 'f[4]'],
+  // Agregados de ACC (bytes 416 a 799)
   ['isAIControlled', 'i'], ['tyreContactPoint', 'f[12]'], ['tyreContactNormal', 'f[12]'], ['tyreContactHeading', 'f[12]'], ['brakeBias', 'f'], ['localVelocity', 'f[3]'],
+  ['P2PActivation', 'i'], ['P2PStatus', 'i'], ['currentMaxRpm', 'i'], ['mz', 'f[4]'], ['fx', 'f[4]'], ['fy', 'f[4]'], ['slipRatio', 'f[4]'], ['slipAngle', 'f[4]'],
+  ['tcInAction', 'i'], ['absInAction', 'i'], ['suspensionDamage', 'f[4]'], ['tyreTemp', 'f[4]'], ['waterTemp', 'f'], ['brakePressure', 'f[4]'],
+  ['frontBrakeCompound', 'i'], ['rearBrakeCompound', 'i'], ['padLife', 'f[4]'], ['discLife', 'f[4]'], ['ignitionOn', 'i'], ['starterEngineOn', 'i'],
+  ['isEngineRunning', 'i'], ['kerbVibration', 'f'], ['slipVibrations', 'f'], ['gVibrations', 'f'], ['absVibrations', 'f'],
 ])
 
-const GRAPHICS_HEAD = [
+const GRAPHICS = layout([
   ['packetId', 'i'], ['status', 'i'], ['session', 'i'], ['currentTime', 'w[15]'], ['lastTime', 'w[15]'], ['bestTime', 'w[15]'], ['split', 'w[15]'],
   ['completedLaps', 'i'], ['position', 'i'], ['iCurrentTime', 'i'], ['iLastTime', 'i'], ['iBestTime', 'i'], ['sessionTimeLeft', 'f'],
   ['distanceTraveled', 'f'], ['isInPit', 'i'], ['currentSectorIndex', 'i'], ['lastSectorTime', 'i'], ['numberOfLaps', 'i'], ['tyreCompound', 'w[33]'],
-  ['replayTimeMultiplier', 'f'], ['normalizedCarPosition', 'f'],
-]
-const GRAPHICS_AC1 = layout([
-  ...GRAPHICS_HEAD,
-  ['carCoordinates', 'f[3]'], ['penaltyTime', 'f'], ['flag', 'i'], ['idealLineOn', 'i'], ['isInPitLane', 'i'], ['surfaceGrip', 'f'],
+  ['replayTimeMultiplier', 'f'], ['normalizedCarPosition', 'f'], ['activeCars', 'i'], ['carCoordinates', 'f[180]'], ['carID', 'i[60]'],
+  ['playerCarID', 'i'], ['penaltyTime', 'f'], ['flag', 'i'], ['penalty', 'i'], ['idealLineOn', 'i'], ['isInPitLane', 'i'], ['surfaceGrip', 'f'],
+  ['mandatoryPitDone', 'i'], ['windSpeed', 'f'], ['windDirection', 'f'], ['isSetupMenuVisible', 'i'], ['mainDisplayIndex', 'i'],
+  ['secondaryDisplayIndex', 'i'], ['TC', 'i'], ['TCCut', 'i'], ['EngineMap', 'i'], ['ABS', 'i'], ['fuelXLap', 'f'], ['rainLights', 'i'],
+  ['flashingLights', 'i'], ['lightsStage', 'i'], ['exhaustTemperature', 'f'], ['wiperLV', 'i'], ['DriverStintTotalTimeLeft', 'i'],
+  ['DriverStintTimeLeft', 'i'], ['rainTyres', 'i'], ['sessionIndex', 'i'], ['usedFuel', 'f'], ['deltaLapTime', 'w[15]'], ['iDeltaLapTime', 'i'],
+  ['estimatedLapTime', 'w[15]'], ['iEstimatedLapTime', 'i'], ['isDeltaPositive', 'i'], ['iSplit', 'i'], ['isValidLap', 'i'],
+  ['fuelEstimatedLaps', 'f'], ['trackStatus', 'w[33]'], ['missingMandatoryPits', 'i'], ['Clock', 'f'], ['directionLightsLeft', 'i'],
+  ['directionLightsRight', 'i'], ['GlobalYellow', 'i'], ['GlobalYellow1', 'i'], ['GlobalYellow2', 'i'], ['GlobalYellow3', 'i'], ['GlobalWhite', 'i'],
+  ['GlobalGreen', 'i'], ['GlobalChequered', 'i'], ['GlobalRed', 'i'], ['mfdTyreSet', 'i'], ['mfdFuelToAdd', 'f'], ['mfdTyrePressureLF', 'f'],
+  ['mfdTyrePressureRF', 'f'], ['mfdTyrePressureLR', 'f'], ['mfdTyrePressureRR', 'f'], ['trackGripStatus', 'i'], ['rainIntensity', 'i'],
+  ['rainIntensityIn10min', 'i'], ['rainIntensityIn30min', 'i'], ['currentTyreSet', 'i'], ['strategyTyreSet', 'i'], ['gapAhead', 'i'], ['gapBehind', 'i'],
 ])
-const GRAPHICS_ACC = layout([
-  ...GRAPHICS_HEAD,
-  ['activeCars', 'i'], ['carCoordinates', 'f[180]'], ['carID', 'i[60]'], ['playerCarID', 'i'], ['penaltyTime', 'f'], ['flag', 'i'], ['penalty', 'i'],
-  ['idealLineOn', 'i'], ['isInPitLane', 'i'], ['surfaceGrip', 'f'], ['mandatoryPitDone', 'i'], ['windSpeed', 'f'], ['windDirection', 'f'],
-  ['isSetupMenuVisible', 'i'], ['mainDisplayIndex', 'i'], ['secondaryDisplayIndex', 'i'], ['TC', 'i'], ['TCCut', 'i'], ['EngineMap', 'i'], ['ABS', 'i'],
-  ['fuelXLap', 'f'], ['rainLights', 'i'], ['flashingLights', 'i'], ['lightsStage', 'i'], ['exhaustTemperature', 'f'], ['wiperLV', 'i'],
-  ['DriverStintTotalTimeLeft', 'i'], ['DriverStintTimeLeft', 'i'], ['rainTyres', 'i'], ['sessionIndex', 'i'], ['usedFuel', 'f'],
-  ['deltaLapTime', 'w[15]'], ['iDeltaLapTime', 'i'], ['estimatedLapTime', 'w[15]'], ['iEstimatedLapTime', 'i'], ['isDeltaPositive', 'i'],
-  ['iSplit', 'i'], ['isValidLap', 'i'], ['fuelEstimatedLaps', 'f'], ['trackStatus', 'w[33]'], ['missingMandatoryPits', 'i'], ['Clock', 'f'],
-])
+const GRAPHICS_FULL = new Set(['carCoordinates', 'carID'])
+
 const STATIC = layout([
   ['smVersion', 'w[15]'], ['acVersion', 'w[15]'], ['numberOfSessions', 'i'], ['numCars', 'i'], ['carModel', 'w[33]'], ['track', 'w[33]'],
   ['playerName', 'w[33]'], ['playerSurname', 'w[33]'], ['playerNick', 'w[33]'], ['sectorCount', 'i'], ['maxTorque', 'f'], ['maxPower', 'f'],
   ['maxRpm', 'i'], ['maxFuel', 'f'], ['suspensionMaxTravel', 'f[4]'], ['tyreRadius', 'f[4]'], ['maxTurboBoost', 'f'], ['deprecated1', 'f'],
   ['deprecated2', 'f'], ['penaltiesEnabled', 'i'], ['aidFuelRate', 'f'], ['aidTireRate', 'f'], ['aidMechanicalDamage', 'f'],
-  ['aidAllowTyreBlankets', 'i'], ['aidStability', 'f'], ['aidAutoClutch', 'i'], ['aidAutoBlip', 'i'], ['hasDRS', 'i'], ['hasERS', 'i'],
+  ['aidAllowTyreBlankets', 'f'], ['aidStability', 'f'], ['aidAutoClutch', 'i'], ['aidAutoBlip', 'i'], ['hasDRS', 'i'], ['hasERS', 'i'],
   ['hasKERS', 'i'], ['kersMaxJ', 'f'], ['engineBrakeSettingsCount', 'i'], ['ersPowerControllerCount', 'i'], ['trackSPlineLength', 'f'],
-  ['trackConfiguration', 'w[33]'],
+  ['trackConfiguration', 'w[33]'], ['ersMaxJ', 'f'], ['isTimedRace', 'i'], ['hasExtraLap', 'i'], ['carSkin', 'w[33]'], ['reversedGridPositions', 'i'],
+  ['pitWindowStart', 'i'], ['pitWindowEnd', 'i'], ['isOnline', 'i'], ['dryTyresName', 'w[33]'], ['wetTyresName', 'w[33]'],
 ])
+
+// Bytes crudos que se graban por muestra: el struct de ACC más margen por si ACR agrega campos al final
+const RAW_PHYSICS = 1024
+const RAW_GRAPHICS = 2048
+
+const STATUS = ['off', 'replay', 'live', 'pausa']
+/** ACR publica las temperaturas en Kelvin: se pasan a °C (si ya parecen °C se dejan). */
+const celsius = (k) => (k > 200 ? k - 273.15 : k)
+const temps = (a) => a?.slice(0, 4).map((k) => Math.round(celsius(k))).join('/')
+const ms = (v) => (v > 0 && v < 3_600_000 ? `${(v / 1000).toFixed(3)} s` : String(v))
+
+/** Coordenadas del auto propio: la fila de carCoordinates cuyo carID es playerCarID. */
+function playerPos(g) {
+  const i = Math.max(0, g.carID?.indexOf(g.playerCarID) ?? 0)
+  return { index: i, xyz: g.carCoordinates?.slice(i * 3, i * 3 + 3) }
+}
 
 // ── Sondeo ─────────────────────────────────────────────────────────────────
 
@@ -186,38 +212,68 @@ const names = ['physics', 'graphics', 'static']
 const pages = Object.fromEntries(names.map((n) => [n, openPage(`Local\\acpmf_${n}`)]))
 const missing = names.filter((n) => !pages[n])
 if (missing.length) {
-  console.log(`\nNo están las páginas acpmf_${missing.join(', acpmf_')}. ¿Está el juego abierto y el auto en pista?`)
+  console.log(`\nNo están las páginas acpmf_${missing.join(', acpmf_')}. ¿Está el juego abierto y el auto en el tramo?`)
   process.exit(1)
 }
 for (const n of names) console.log(`acpmf_${n}: ${pages[n].size} bytes`)
 
-const st = decode(pages.static.read(), STATIC)
+let st = decode(pages.static.read(), STATIC)
+const staticKey = (s) => `${s.carModel}|${s.track}|${s.trackConfiguration}|${s.maxRpm}`
+let lastStaticKey = staticKey(st)
 console.log('\nStatic:', JSON.stringify(st, null, 1))
+if (!st.carModel && !st.maxRpm) console.log('(Static en ceros: ACR la completa recién al entrar al tramo. Se vuelve a leer cada 2 s.)')
 
 const file = RECORD ? `sondeo-acr-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl` : null
+const writeStatic = () =>
+  appendFileSync(file, JSON.stringify({ kind: 'static', sizes: Object.fromEntries(names.map((n) => [n, pages[n].size])), static: st, raw: pages.static.read().toString('base64') }) + '\n')
 if (file) {
-  writeFileSync(file, JSON.stringify({ kind: 'static', sizes: Object.fromEntries(names.map((n) => [n, pages[n].size])), static: st, raw: pages.static.read().toString('base64') }) + '\n')
+  writeFileSync(file, '')
+  writeStatic()
   console.log(`\nGrabando en ${file} (Ctrl+C para cortar)…`)
 }
 
 const t0 = Date.now()
 let lastPrint = 0
+let lastStatic = t0
 const timer = setInterval(() => {
   const now = Date.now()
-  const pb = pages.physics.read()
-  const gb = pages.graphics.read()
+  if (now - lastStatic >= 2000) {
+    lastStatic = now
+    st = decode(pages.static.read(), STATIC)
+    if (staticKey(st) !== lastStaticKey) {
+      lastStaticKey = staticKey(st)
+      console.log('\nStatic cambió:', JSON.stringify({ carModel: st.carModel, track: st.track, trackConfiguration: st.trackConfiguration, trackSPlineLength: st.trackSPlineLength, sectorCount: st.sectorCount, numCars: st.numCars, maxRpm: st.maxRpm, maxFuel: st.maxFuel, acVersion: st.acVersion, smVersion: st.smVersion }))
+      if (file) writeStatic()
+    }
+  }
+
+  const pb = pages.physics.read(RAW_PHYSICS)
+  const gb = pages.graphics.read(RAW_GRAPHICS)
   const ph = decode(pb, PHYSICS)
-  const ac1 = decode(gb, GRAPHICS_AC1)
-  const acc = decode(gb, GRAPHICS_ACC)
-  if (file) appendFileSync(file, JSON.stringify({ t: now - t0, physics: ph, ac1, acc, rawPhysics: pb.toString('base64'), rawGraphics: gb.toString('base64') }) + '\n')
+  const g = decode(gb, GRAPHICS, GRAPHICS_FULL)
+  const me = playerPos(g)
+  if (file) {
+    const { carCoordinates, carID, ...rest } = g
+    appendFileSync(file, JSON.stringify({ t: now - t0, physics: ph, graphics: { ...rest, player: me }, rawPhysics: pb.toString('base64'), rawGraphics: gb.toString('base64') }) + '\n')
+  }
   if (now - lastPrint >= 500) {
     lastPrint = now
+    console.log(`\n[${((now - t0) / 1000).toFixed(1)} s] ${STATUS[g.status] ?? g.status} · sesión ${g.session} · physics #${ph.packetId} · graphics #${g.packetId}`)
     console.log(
-      `\n[${((now - t0) / 1000).toFixed(1)} s] physics #${ph.packetId} · ${ph.speedKmh?.toFixed(1)} km/h · ${ph.rpms} rpm · marcha ${ph.gear} · gas ${ph.gas?.toFixed(2)} · freno ${ph.brake?.toFixed(2)} · rumbo ${ph.heading?.toFixed(2)}`,
+      `  tramo: tiempo ${ms(g.iCurrentTime)} (${g.currentTime}) · último ${ms(g.iLastTime)} · mejor ${ms(g.iBestTime)} · parcial ${ms(g.iSplit)} (${g.split}) · sector ${g.currentSectorIndex} · últ. sector ${ms(g.lastSectorTime)} · delta ${g.deltaLapTime} · válida ${g.isValidLap}`,
     )
-    console.log(`  graphics #${ac1.packetId} · status ${ac1.status} · sesión ${ac1.session} · vuelta ${ac1.currentTime} (${ac1.iCurrentTime} ms) · pos. en el tramo ${ac1.normalizedCarPosition?.toFixed(4)} · recorrido ${ac1.distanceTraveled?.toFixed(0)} m`)
-    console.log(`  como AC1: coords ${JSON.stringify(ac1.carCoordinates)} · bandera ${ac1.flag} · boxes ${ac1.isInPitLane} · grip ${ac1.surfaceGrip?.toFixed(3)}`)
-    console.log(`  como ACC: autos ${acc.activeCars} · coords ${JSON.stringify(acc.carCoordinates?.slice(0, 3))} · id ${acc.playerCarID} · bandera ${acc.flag} · grip ${acc.surfaceGrip?.toFixed(3)} · válida ${acc.isValidLap} · delta ${acc.deltaLapTime} · reloj ${acc.Clock?.toFixed(0)}`)
+    console.log(
+      `  posición: recorrido ${g.distanceTraveled?.toFixed(1)} m · normalizada ${g.normalizedCarPosition?.toFixed(4)} · coords ${JSON.stringify(me.xyz)} (fila ${me.index}, id ${g.playerCarID}, autos ${g.activeCars}) · rumbo ${ph.heading?.toFixed(3)}`,
+    )
+    console.log(
+      `  superficie: grip ${g.surfaceGrip?.toFixed(3)} · ruedas afuera ${ph.numberOfTyresOut} · suciedad ${JSON.stringify(ph.tyreDirtyLevel)} · daño ${JSON.stringify(ph.carDamage)} · susp. ${JSON.stringify(ph.suspensionDamage)} · bandera ${g.flag} · estado "${g.trackStatus}"`,
+    )
+    console.log(
+      `  auto: ${ph.speedKmh?.toFixed(1)} km/h · ${ph.rpms}/${ph.currentMaxRpm} rpm · marcha ${ph.gear} · gas ${ph.gas?.toFixed(2)} · freno ${ph.brake?.toFixed(2)} · embrague ${ph.clutch?.toFixed(2)} · volante ${ph.steerAngle?.toFixed(3)} · nafta ${ph.fuel?.toFixed(1)} l`,
+    )
+    console.log(
+      `  temps °C: gomas ${temps(ph.tyreCoreTemperature)} · frenos ${temps(ph.brakeTemp)} · agua ${Math.round(celsius(ph.waterTemp))} · escape ${Math.round(celsius(g.exhaustTemperature))} · aire ${ph.airTemp?.toFixed(1)} · piso ${ph.roadTemp?.toFixed(1)} · TC ${g.TC} · ABS ${g.ABS} · reloj ${g.Clock?.toFixed(0)}`,
+    )
   }
   if (!file && now - t0 > 10_000) {
     clearInterval(timer)

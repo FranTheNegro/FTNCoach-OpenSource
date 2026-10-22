@@ -18,6 +18,9 @@ interface Kernel32 {
   UnmapViewOfFile: (addr: Ptr) => number
   CloseHandle: (h: Ptr) => number
   RtlMoveMemory: (dst: Buffer, src: Ptr, len: number) => void
+  CreateToolhelp32Snapshot: (flags: number, pid: number) => Ptr | null
+  Process32FirstW: (snap: Ptr, entry: Buffer) => number
+  Process32NextW: (snap: Ptr, entry: Buffer) => number
 }
 
 let k32: Kernel32 | null = null
@@ -33,11 +36,41 @@ function kernel32(): Kernel32 {
     UnmapViewOfFile: lib.func('int __stdcall UnmapViewOfFile(void* addr)'),
     CloseHandle: lib.func('int __stdcall CloseHandle(void* h)'),
     RtlMoveMemory: lib.func('void __stdcall RtlMoveMemory(void* dst, void* src, size_t len)'),
+    CreateToolhelp32Snapshot: lib.func('void* __stdcall CreateToolhelp32Snapshot(uint32_t flags, uint32_t pid)'),
+    Process32FirstW: lib.func('int __stdcall Process32FirstW(void* snap, void* entry)'),
+    Process32NextW: lib.func('int __stdcall Process32NextW(void* snap, void* entry)'),
   }
   return k32
 }
 
 export const isWindows = process.platform === 'win32'
+
+const TH32CS_SNAPPROCESS = 0x2
+const INVALID_HANDLE = 0xffffffffffffffffn
+// PROCESSENTRY32W en x64: dwSize al principio y szExeFile (260 wchar) en el byte 44
+const ENTRY_SIZE = 568
+const EXE_OFFSET = 44
+
+/** true si hay un proceso con ese ejecutable (sin distinguir mayúsculas, ej. "acr.exe"). */
+export function isProcessRunning(exe: string): boolean {
+  if (!isWindows) return false
+  const k = kernel32()
+  const snap = k.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+  if (!snap || snap === INVALID_HANDLE) return false
+  const want = exe.toLowerCase()
+  const entry = Buffer.alloc(ENTRY_SIZE)
+  entry.writeUInt32LE(ENTRY_SIZE, 0)
+  try {
+    for (let ok = k.Process32FirstW(snap, entry); ok; ok = k.Process32NextW(snap, entry)) {
+      const name = entry.toString('utf16le', EXE_OFFSET, ENTRY_SIZE)
+      const end = name.indexOf('\0')
+      if ((end >= 0 ? name.slice(0, end) : name).toLowerCase() === want) return true
+    }
+    return false
+  } finally {
+    k.CloseHandle(snap)
+  }
+}
 
 let winmm: { begin: (ms: number) => number; end: (ms: number) => number } | null = null
 let highRes = false
