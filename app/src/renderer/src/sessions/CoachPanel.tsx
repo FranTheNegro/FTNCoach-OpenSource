@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { ClipboardList, MessageSquareText, Target } from 'lucide-react'
+import { Apex, BrakePedal, PhaseIcon, ThrottlePedal, Tyre } from '@ui/icons'
 import type { CoachState } from '@shared/analysis'
 import { COACH_MODELS, COACH_PROVIDERS } from '@shared/analysis'
 import { Button, Card, Label } from '../components/ui'
@@ -39,7 +41,7 @@ export function CoachPanel({ sessionId, lap, lapLabel }: { sessionId: string; la
   if (hasKey === false)
     return (
       <Card className="max-w-[720px]">
-        <Label>Coach con IA</Label>
+        <Label icon={MessageSquareText}>Coach con IA</Label>
         <p className="text-plata mt-3 leading-relaxed">
           El coach lee tu telemetría con IA y te dice qué cambiar en la próxima vuelta. Funciona gratis con Gemini u OpenRouter, con tu suscripción de
           Claude (vía Claude Code) o pagando por uso con Claude u OpenCode, siempre con tu propia cuenta. Falta la API key de {provider}: cargala en{' '}
@@ -83,7 +85,7 @@ export function CoachPanel({ sessionId, lap, lapLabel }: { sessionId: string; la
         {r && (
           <>
             <Card>
-              <Label>Briefing</Label>
+              <Label icon={ClipboardList}>Briefing</Label>
               <p className="mt-3 text-[16px] leading-relaxed">{r.briefing}</p>
             </Card>
             <div className="grid grid-cols-3 gap-4">
@@ -91,7 +93,7 @@ export function CoachPanel({ sessionId, lap, lapLabel }: { sessionId: string; la
                 <article key={c.rank} className="bg-carbono-2 border border-grafito rounded-card p-4 flex flex-col gap-2">
                   <div className="flex justify-between items-center data">
                     <span className="flex items-center gap-2 text-[12px] tracking-[0.08em] text-plata uppercase">
-                      <span className="w-2 h-2 bg-alerta" />
+                      <PhaseIcon title={c.title} color="var(--ftn-alerta)" />
                       {c.title}
                     </span>
                     <span className="text-azul font-bold text-[14px]">−{c.gainS.toFixed(2)} s</span>
@@ -106,7 +108,7 @@ export function CoachPanel({ sessionId, lap, lapLabel }: { sessionId: string; la
             </div>
             {r.corners.length > 0 && (
               <Card>
-                <Label>Curva por curva</Label>
+                <Label icon={Apex}>Curva por curva</Label>
                 <div className="mt-3 divide-y divide-grafito">
                   {r.corners.map((c, i) => (
                     <div key={i} className="py-3 grid grid-cols-[180px_160px_1fr_70px] gap-4 items-baseline">
@@ -122,19 +124,19 @@ export function CoachPanel({ sessionId, lap, lapLabel }: { sessionId: string; la
             <div className="grid grid-cols-3 gap-4">
               {(
                 [
-                  ['Frenada', r.dynamics.braking],
-                  ['Acelerador', r.dynamics.throttle],
-                  ['Círculo de fricción', r.dynamics.frictionCircle],
+                  ['Frenada', r.dynamics.braking, BrakePedal],
+                  ['Acelerador', r.dynamics.throttle, ThrottlePedal],
+                  ['Círculo de fricción', r.dynamics.frictionCircle, Tyre],
                 ] as const
-              ).map(([t, v]) => (
+              ).map(([t, v, icon]) => (
                 <Card key={t}>
-                  <Label>{t}</Label>
+                  <Label icon={icon}>{t}</Label>
                   <p className="mt-2 text-[14px] leading-snug">{v}</p>
                 </Card>
               ))}
             </div>
             <Card className="border-ultramar">
-              <Label color="var(--ftn-azul)">Para el próximo stint</Label>
+              <Label icon={Target} color="var(--ftn-azul)">Para el próximo stint</Label>
               <p className="mt-2 text-[16px] leading-snug font-semibold">{r.drill.description}</p>
               <p className="mt-1 text-plata text-[14px]">Objetivo: {r.drill.kpi}</p>
             </Card>

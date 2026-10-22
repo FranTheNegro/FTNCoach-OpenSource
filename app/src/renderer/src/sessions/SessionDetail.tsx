@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { MousePointerClick } from 'lucide-react'
 import { isLocal, type CompareResult, type SessionDetail, type SessionSummary } from '@shared/analysis'
 import { localHistory } from '@shared/history'
 import { LAP_KIND_LABEL, type LapKind } from '@shared/live'
 import * as fmt from '@ui/format'
-import type { MapMarker } from '@ui/TrackMapSvg'
+import { headingAt, type MapMarker } from '@ui/TrackMapSvg'
+import { LineSwatch, PhaseIcon, phaseIcon } from '@ui/icons'
 import { Button, Label } from '../components/ui'
 import { useLibrary } from '../hooks'
 import { TraceChart, type ChartMarks } from './TraceChart'
@@ -496,10 +498,11 @@ function Analysis({
       const c = d.corners.find((x) => x.id === ins.cornerId)
       if (!c) continue
       const i = Math.round(c.apexPct * (n - 1))
-      if (Number.isFinite(cmp.a.x[i])) markers.push({ x: cmp.a.x[i], y: cmp.a.y![i], color: 'var(--ftn-alerta)', label: numbered ? undefined : c.label })
+      if (Number.isFinite(cmp.a.x[i])) markers.push({ x: cmp.a.x[i], y: cmp.a.y![i], color: 'var(--ftn-alerta)', icon: phaseIcon(ins.title), label: numbered ? undefined : c.label })
     }
-    if (cursor !== null && Number.isFinite(cmp.a.x[cursor]))
-      markers.push({ x: cmp.a.x[cursor], y: cmp.a.y[cursor], color: 'var(--ftn-blanco)', size: 1.3 })
+    if (cursor !== null && Number.isFinite(cmp.a.x[cursor])) {
+      markers.push({ x: cmp.a.x[cursor], y: cmp.a.y[cursor], color: 'var(--ftn-blanco)', size: 1.3, heading: headingAt(cmp.a.x, cmp.a.y, cursor) })
+    }
   }
   const focus = cmp && range ? bounds([cmp.a.x, cmp.b.x], [cmp.a.y, cmp.b.y], range[0], range[1]) : null
   const totalDelta = cmp ? cmp.delta.filter(Number.isFinite).at(-1) : null
@@ -541,11 +544,11 @@ function Analysis({
           </div>
           <div className="flex gap-4 data text-[12px] text-plata">
             <span className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5" style={{ background: C.b }} />
+              <LineSwatch color={C.b} />
               {refLabel}
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5" style={{ background: C.a }} />V{A?.lap}
+              <LineSwatch color={C.a} />V{A?.lap}
             </span>
             {distLabel && <span className="text-niebla">{distLabel}</span>}
           </div>
@@ -691,7 +694,7 @@ function Analysis({
           >
             <div className="w-full flex justify-between items-center gap-3 data">
               <div className="flex items-center gap-2 text-[12px] tracking-[0.08em] text-plata uppercase min-w-0">
-                <span className="w-2 h-2 bg-alerta shrink-0" />
+                <PhaseIcon title={ins.title} color="var(--ftn-alerta)" />
                 <span className="truncate">{ins.title}</span>
               </div>
               <div className="text-[14px] font-bold text-azul shrink-0">{fmt.delta(-ins.lossS, 2)} s</div>
@@ -798,7 +801,7 @@ function LapsTable({ d, selected, onSelect }: { d: SessionDetail; selected: numb
         </tbody>
       </table>
       <div className="px-4 py-3 border-t border-grafito">
-        <Label>Tocá una vuelta para analizarla</Label>
+        <Label icon={MousePointerClick}>Tocá una vuelta para analizarla</Label>
       </div>
     </div>
   )

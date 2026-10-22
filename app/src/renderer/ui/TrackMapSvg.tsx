@@ -2,7 +2,9 @@
  * Mapa del trazado: el asfalto real (dato fijo, nunca generado con las vueltas)
  * y encima las trazadas del piloto. Coordenadas en metros, y hacia abajo.
  */
+import type { LucideIcon } from 'lucide-react'
 import type { TrackGeometry } from '@shared/analysis'
+import { CAR_ARROW_PATH, DIAMOND_PATH } from './icons'
 
 export interface MapLine {
   x: number[]
@@ -21,6 +23,53 @@ export interface MapMarker {
   color: string
   label?: string
   size?: number
+  /** Sentido de marcha (rad, atan2 de dy y dx en el mapa): se dibuja como la flecha del auto. */
+  heading?: number | null
+  /** Qué marca el punto (frenada, apex…): se dibuja el ícono en una placa. Sin ícono ni sentido, un rombo. */
+  icon?: LucideIcon
+}
+
+/** Sentido de marcha entre dos puntos del mapa, o null si están casi encima. */
+export function headingOf(x0: number, y0: number, x1: number, y1: number, minM = 0.5): number | null {
+  const dx = x1 - x0
+  const dy = y1 - y0
+  if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.hypot(dx, dy) < minM) return null
+  return Math.atan2(dy, dx)
+}
+
+/** Sentido de marcha en el punto `i` de una vuelta (mirando unos puntos adelante). */
+export function headingAt(x: number[], y: number[], i: number): number | null {
+  const j = Math.min(x.length - 1, i + 3)
+  const k = j > i ? i : Math.max(0, i - 3)
+  return headingOf(x[k], y[k], x[j], y[j])
+}
+
+function Marker({ m, font }: { m: MapMarker; font: number }) {
+  const s = (m.size ?? 1) * font * 0.7
+  if (m.heading !== undefined && m.heading !== null) {
+    const k = s * 2.2
+    return (
+      <path
+        d={CAR_ARROW_PATH}
+        transform={`translate(${m.x} ${m.y}) rotate(${(m.heading * 180) / Math.PI + 90}) scale(${k})`}
+        fill={m.color}
+        stroke="var(--ftn-carbono)"
+        strokeWidth={0.08}
+        strokeLinejoin="round"
+      />
+    )
+  }
+  if (m.icon) {
+    const Icon = m.icon
+    const b = s * 2.4
+    return (
+      <g>
+        <rect x={m.x - b / 2} y={m.y - b / 2} width={b} height={b} rx={b * 0.22} fill="var(--ftn-carbono)" stroke={m.color} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+        <Icon x={m.x - b * 0.35} y={m.y - b * 0.35} width={b * 0.7} height={b * 0.7} color={m.color} strokeWidth={2.4} aria-hidden="true" />
+      </g>
+    )
+  }
+  return <path d={DIAMOND_PATH} transform={`translate(${m.x} ${m.y}) scale(${s * 1.3})`} fill={m.color} />
 }
 
 function pathOf(x: number[], y: number[], from = 0, to = x.length, step = 1): string {
@@ -149,9 +198,9 @@ export function TrackMapSvg({
         const s = (m.size ?? 1) * font * 0.7
         return (
           <g key={i}>
-            <rect x={m.x - s / 2} y={m.y - s / 2} width={s} height={s} fill={m.color} />
+            <Marker m={m} font={font} />
             {m.label && (
-              <text x={m.x + s} y={m.y} fontSize={font} fill="var(--ftn-blanco)" fontFamily="var(--ftn-font-data)" dominantBaseline="middle">
+              <text x={m.x + s * (m.icon ? 1.6 : 1)} y={m.y} fontSize={font} fill="var(--ftn-blanco)" fontFamily="var(--ftn-font-data)" dominantBaseline="middle">
                 {m.label}
               </text>
             )}

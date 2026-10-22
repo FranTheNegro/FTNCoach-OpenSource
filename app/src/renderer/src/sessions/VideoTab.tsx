@@ -7,12 +7,13 @@
  * siguen solos al video, elegir una vuelta o una curva salta al momento exacto, y
  * las dos cámaras quedan alineadas aunque cada una tenga su propio anclaje.
  */
+import { Clapperboard, TriangleAlert, Video } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CompareResult, SessionDetail } from '@shared/analysis'
 import type { VideoCam, VideoConfig } from '@shared/api'
 import { LAP_KIND_LABEL } from '@shared/live'
 import * as fmt from '@ui/format'
-import { TrackMapSvg } from '@ui/TrackMapSvg'
+import { headingAt, TrackMapSvg } from '@ui/TrackMapSvg'
 import { Button, Card, Label } from '../components/ui'
 import { TraceChart, type ChartMarks } from './TraceChart'
 
@@ -151,7 +152,7 @@ export function VideoTab({ sessionId, d }: { sessionId: string; d: SessionDetail
   if (!cams.length)
     return (
       <Card className="max-w-[760px]">
-        <Label>Video de la sesión</Label>
+        <Label icon={Video}>Video de la sesión</Label>
         <p className="text-plata mt-3 leading-relaxed">
           Cargá el video que grabaste de esta sesión (OBS, ShadowPlay, la grabación de Windows) y FTN Coach lo sincroniza con la telemetría: la vuelta,
           el mapa y los mandos siguen al video, y podés saltar a cualquier vuelta o curva. Podés sumar una segunda cámara (exterior, TV) y verlas juntas.
@@ -206,7 +207,7 @@ export function VideoTab({ sessionId, d }: { sessionId: string; d: SessionDetail
       {needsSync.length > 0 && !syncCam && (
         <div className="bg-carbono-2 border border-alerta/50 rounded-card px-4 py-3 flex items-center justify-between gap-4">
           <span className="text-[14px]">
-            <span className="inline-block w-2 h-2 bg-alerta mr-2" />
+            <TriangleAlert size={15} className="inline-block align-[-2px] text-alerta mr-2" aria-hidden="true" />
             Falta sincronizar {needsSync.map((c) => CAM_NAME[c].toLowerCase()).join(' y ')}: hasta entonces el video no sabe qué vuelta es.
           </span>
           <Button variant="primary" className="h-9 text-[13px]" onClick={() => setSyncCam(needsSync[0])}>
@@ -275,7 +276,7 @@ export function VideoTab({ sessionId, d }: { sessionId: string; d: SessionDetail
                 className="w-full h-[220px]"
                 map={d.map.map}
                 lines={[{ x: live.a.x, y: live.a.y, color: 'var(--ftn-azul)', width: 2, off: live.a.off }]}
-                markers={idx !== null && Number.isFinite(live.a.x[idx]) ? [{ x: live.a.x[idx], y: live.a.y[idx], color: 'var(--ftn-blanco)', size: 1.6 }] : []}
+                markers={idx !== null && Number.isFinite(live.a.x[idx]) ? [{ x: live.a.x[idx], y: live.a.y[idx], color: 'var(--ftn-blanco)', size: 1.6, heading: headingAt(live.a.x, live.a.y, idx) }] : []}
               />
             ) : (
               <div className="h-[120px] grid place-items-center text-niebla text-[13px] text-center">
@@ -439,7 +440,7 @@ function SyncPanel({
   return (
     <section className="bg-carbono-2 border border-ultramar rounded-panel px-5 py-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <Label color="var(--ftn-azul)">Sincronizar {CAM_NAME[cam].toLowerCase()}</Label>
+        <Label icon={Clapperboard} color="var(--ftn-azul)">Sincronizar {CAM_NAME[cam].toLowerCase()}</Label>
         <button onClick={onClose} className="text-[13px] text-niebla hover:text-blanco">
           Cerrar
         </button>

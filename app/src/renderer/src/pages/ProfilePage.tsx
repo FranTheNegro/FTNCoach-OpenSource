@@ -3,6 +3,8 @@
  * contexto), su estilo de manejo medido, sus récords y dónde deja tiempo.
  */
 import { useEffect, useState, type ReactNode } from 'react'
+import { type LucideIcon, Medal, Repeat, Target, TrendingDown, TrendingUp, Trophy, User } from 'lucide-react'
+import { BrakePedal, ThrottlePedal, TrailBrake, Tyre } from '@ui/icons'
 import type { DriverStyle } from '@shared/analysis'
 import type { Settings } from '@shared/api'
 import * as fmt from '@ui/format'
@@ -31,7 +33,7 @@ function ProfileForm({ value, onSave, onCancel }: { value: Settings['profile']; 
   const set = <K extends keyof Settings['profile']>(k: K, v: Settings['profile'][K]) => setP((x) => ({ ...x, [k]: v }))
   return (
     <Card className="flex flex-col gap-4">
-      <Label>Sobre vos</Label>
+      <Label icon={User}>Sobre vos</Label>
       <div className="grid grid-cols-[1fr_160px_1fr] gap-4">
         <Field label="Nombre">
           <input value={p.name} onChange={(e) => set('name', e.target.value)} className={`${INPUT} h-11`} placeholder="Cómo te llama el coach" />
@@ -86,10 +88,18 @@ function ProfileForm({ value, onSave, onCancel }: { value: Settings['profile']; 
   )
 }
 
-function Row({ title, sub, value, color }: { title: string; sub: string; value: ReactNode; color: string }) {
+const TRAIT_ICON: Record<DriverStyle['traits'][number]['id'], LucideIcon> = {
+  braking: BrakePedal,
+  trail: TrailBrake,
+  throttle: ThrottlePedal,
+  consistency: Repeat,
+  grip: Tyre,
+}
+
+function Row({ title, sub, value, color, icon: Icon }: { title: string; sub: string; value: ReactNode; color: string; icon: LucideIcon }) {
   return (
     <div className="px-4 py-3 flex items-center gap-3">
-      <span className="w-2 h-2 shrink-0" style={{ background: color }} />
+      <Icon size={18} color={color} className="shrink-0" aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <div className="text-[14px] font-semibold truncate">{title}</div>
         <div className="text-[13px] text-plata truncate">{sub}</div>
@@ -139,13 +149,13 @@ export function ProfilePage() {
               <div className="grid grid-cols-2 gap-4">
                 {p.about && (
                   <Card>
-                    <Label>Tu experiencia</Label>
+                    <Label icon={Medal}>Tu experiencia</Label>
                     <p className="mt-2 text-plata leading-relaxed whitespace-pre-wrap">{p.about}</p>
                   </Card>
                 )}
                 {p.goals && (
                   <Card className="border-ultramar">
-                    <Label color="var(--ftn-azul)">Objetivo actual</Label>
+                    <Label icon={Target} color="var(--ftn-azul)">Objetivo actual</Label>
                     <p className="mt-2 leading-relaxed whitespace-pre-wrap">{p.goals}</p>
                   </Card>
                 )}
@@ -184,6 +194,7 @@ export function ProfilePage() {
                 {style.traits.map((t) => (
                   <Row
                     key={t.id}
+                    icon={TRAIT_ICON[t.id]}
                     title={t.title}
                     sub={t.text}
                     color={t.good === true ? 'var(--ftn-record)' : t.good === false ? 'var(--ftn-alerta)' : 'var(--ftn-acero)'}
@@ -204,7 +215,7 @@ export function ProfilePage() {
               <p className="text-[13px] text-niebla mb-3">Tu PB está pegado a tu vuelta ideal (tus mejores sectores).</p>
               <div className="bg-carbono-2 border border-grafito rounded-card divide-y divide-grafito">
                 {strengths.map(({ c, pb, gap }) => (
-                  <Row key={c.key} title={c.track} sub={c.car} color="var(--ftn-record)" value={<>{fmt.lapTime(pb)}<div className="text-[12px] text-record">{fmt.delta(gap, 3)} a la ideal</div></>} />
+                  <Row key={c.key} icon={TrendingUp} title={c.track} sub={c.car} color="var(--ftn-record)" value={<>{fmt.lapTime(pb)}<div className="text-[12px] text-record">{fmt.delta(gap, 3)} a la ideal</div></>} />
                 ))}
               </div>
             </section>
@@ -214,7 +225,7 @@ export function ProfilePage() {
               {weaknesses.length ? (
                 <div className="bg-carbono-2 border border-grafito rounded-card divide-y divide-grafito">
                   {weaknesses.map(({ c, pb, gap }) => (
-                    <Row key={c.key} title={c.track} sub={c.car} color="var(--ftn-alerta)" value={<>{fmt.lapTime(pb)}<div className="text-[12px] text-alerta">{fmt.delta(gap, 3)} a la ideal</div></>} />
+                    <Row key={c.key} icon={TrendingDown} title={c.track} sub={c.car} color="var(--ftn-alerta)" value={<>{fmt.lapTime(pb)}<div className="text-[12px] text-alerta">{fmt.delta(gap, 3)} a la ideal</div></>} />
                   ))}
                 </div>
               ) : (
@@ -231,6 +242,7 @@ export function ProfilePage() {
               {records.map((c) => (
                 <Row
                   key={c.key}
+                  icon={Trophy}
                   title={c.track}
                   sub={`${c.car} · ${c.sim === 'ac' ? 'Assetto Corsa' : 'iRacing'}`}
                   color="var(--ftn-mejor)"

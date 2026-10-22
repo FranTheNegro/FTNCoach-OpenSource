@@ -4,6 +4,7 @@
  * mandos). Se puede ampliar a pantalla completa.
  */
 import { useEffect, useMemo, useState } from 'react'
+import { LineSwatch } from '@ui/icons'
 import type { CompareResult, SessionDetail } from '@shared/analysis'
 import { TrackMapSvg, type MapLine, type MapMarker } from '@ui/TrackMapSvg'
 
@@ -123,15 +124,15 @@ export function MapPanel({
         {mode === 'lines' ? (
           <>
             <span className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5" style={{ background: B }} />
+              <LineSwatch color={B} width={1.5} />
               {labelB}
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5" style={{ background: A }} />
+              <LineSwatch color={A} />
               {labelA}
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5" style={{ background: 'var(--ftn-alerta)' }} />
+              <LineSwatch color="var(--ftn-alerta)" width={3.5} />
               fuera de pista
             </span>
           </>
@@ -139,7 +140,7 @@ export function MapPanel({
           <>
             {LEGEND[mode].map(([c, t], i) => (
               <span key={i} className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5" style={{ background: c }} />
+                <LineSwatch color={c} width={3} />
                 {t}
               </span>
             ))}

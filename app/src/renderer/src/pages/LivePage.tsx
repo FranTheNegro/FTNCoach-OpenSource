@@ -1,3 +1,4 @@
+import { Eye, FlaskConical, Gauge, Link, Plug, Tablet, Unplug } from 'lucide-react'
 import { SIM_LABEL } from '@shared/live'
 import { Button, Card, Label, PageHeader, Toggle } from '../components/ui'
 import { useLanState, useLiveState } from '../hooks'
@@ -13,7 +14,11 @@ function SimStatus() {
   const connected = st?.state === 'connected'
   return (
     <Card className="flex items-center gap-5">
-      <span className={`w-3 h-3 shrink-0 ${connected ? 'bg-record' : 'bg-alerta animate-pulse'}`} />
+      {connected ? (
+        <Plug size={22} className="shrink-0 text-record" aria-hidden="true" />
+      ) : (
+        <Unplug size={22} className="shrink-0 text-alerta animate-pulse" aria-hidden="true" />
+      )}
       <div className="min-w-0 flex-1">
         <div className="text-[18px] font-semibold">
           {connected && st?.sim ? `Conectado a ${SIM_LABEL[st.sim]}` : 'Esperando el simulador'}
@@ -26,7 +31,7 @@ function SimStatus() {
       </div>
       {connected && (
         <div className="text-right shrink-0">
-          <Label>Lectura</Label>
+          <Label icon={Gauge}>Lectura</Label>
           <div className="data text-[18px] mt-1">{st?.hz ?? 0} Hz</div>
         </div>
       )}
@@ -45,7 +50,7 @@ function TabletCard() {
     <Card>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Label>Dashboard en la tablet</Label>
+          <Label icon={Tablet}>Dashboard en la tablet</Label>
           <p className="text-plata mt-2 leading-relaxed">
             Escaneá el código con la tablet o el celular conectados al mismo wifi que esta PC. Se abre en el navegador, sin
             instalar nada.
@@ -62,7 +67,7 @@ function TabletCard() {
 
       {lan?.exposed && url ? (
         <div className="mt-5">
-          <Label>Dirección</Label>
+          <Label icon={Link}>Dirección</Label>
           <div className="data text-[18px] mt-1 break-all">{url}</div>
           {lan.urls.length > 1 && (
             <div className="data text-niebla text-[12px] mt-1">También: {lan.urls.slice(1).join(' · ')}</div>
@@ -108,7 +113,7 @@ function DemoCard() {
   const playing = live?.status.sim === 'replay'
   return (
     <Card>
-      <Label>Probar sin el simulador</Label>
+      <Label icon={FlaskConical}>Probar sin el simulador</Label>
       <p className="text-plata mt-2 leading-relaxed">
         Reproducí una sesión grabada de iRacing (.ibt) como si estuvieras en pista. Sirve para acomodar la tablet antes de
         correr. Si abrís el simulador, tiene prioridad.
@@ -140,7 +145,7 @@ function Preview() {
   return (
     <Card className="p-0 overflow-hidden">
       <div className="px-5 pt-4 pb-3 flex items-center justify-between">
-        <Label>Vista previa</Label>
+        <Label icon={Eye}>Vista previa</Label>
         <span className="text-[12px] text-niebla">Lo mismo que ve la tablet</span>
       </div>
       <div className="aspect-[16/10] border-t border-grafito">

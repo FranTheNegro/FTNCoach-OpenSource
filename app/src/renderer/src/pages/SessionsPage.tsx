@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { History } from 'lucide-react'
 import type { SessionSummary } from '@shared/analysis'
 import * as fmt from '@ui/format'
 import { Button, Card, Label, PageHeader } from '../components/ui'
@@ -146,7 +147,7 @@ export function SessionsPage({
 
       {empty && (
         <Card>
-          <Label>Todavía no hay sesiones</Label>
+          <Label icon={History}>Todavía no hay sesiones</Label>
           <div className="text-plata mt-3 leading-relaxed space-y-2">
             <p>
               <b className="text-blanco">iRacing:</b> FTN Coach lee los archivos <span className="data">.ibt</span> que guarda iRacing. Activá la

@@ -3,6 +3,8 @@
  * mejor que hiciste en la sesión: tiempo, velocidades, frenada, aceleración y
  * qué tan parejo pasás por cada una.
  */
+import { MousePointerClick, TrendingDown, TrendingUp } from 'lucide-react'
+import { Delta } from '@ui/icons'
 import type { CornerPass, SessionDetail } from '@shared/analysis'
 import * as fmt from '@ui/format'
 import { Label } from '../components/ui'
@@ -66,19 +68,19 @@ export function CornersTable({
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-carbono-2 border border-grafito rounded-card px-5 py-4">
-          <Label>Perdés en curvas</Label>
+          <Label icon={TrendingDown}>Perdés en curvas</Label>
           <div className="data text-[24px] font-bold text-alerta mt-1">{fmt.delta(totalLoss, 3)} s</div>
           <div className="text-[13px] text-plata">
             {labelA} contra {rLabel}
           </div>
         </div>
         <div className="bg-carbono-2 border border-grafito rounded-card px-5 py-4">
-          <Label>Ganás en curvas</Label>
+          <Label icon={TrendingUp}>Ganás en curvas</Label>
           <div className="data text-[24px] font-bold text-record mt-1">{fmt.delta(-totalGain, 3)} s</div>
           <div className="text-[13px] text-plata">donde {labelA} es mejor</div>
         </div>
         <div className="bg-carbono-2 border border-grafito rounded-card px-5 py-4">
-          <Label>Si pasaras cada curva como tu mejor</Label>
+          <Label icon={Delta}>Si pasaras cada curva como tu mejor</Label>
           <div className="data text-[24px] font-bold text-azul mt-1">{fmt.delta(-potential, 3)} s</div>
           <div className="text-[13px] text-plata">mejor paso limpio de cada curva en la sesión</div>
         </div>
@@ -164,7 +166,7 @@ export function CornersTable({
           </tbody>
         </table>
         <div className="px-4 py-3 border-t border-grafito flex justify-between gap-4">
-          <Label>Tocá una curva para verla en el análisis</Label>
+          <Label icon={MousePointerClick}>Tocá una curva para verla en el análisis</Label>
           <span className="text-[12px] text-niebla">Velocidades en km/h · frenada y a fondo contra {rLabel}</span>
         </div>
       </div>

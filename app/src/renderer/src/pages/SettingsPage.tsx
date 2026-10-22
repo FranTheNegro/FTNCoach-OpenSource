@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { AppWindow, Car, Folder, HardDriveDownload, MessageSquareText, Wifi } from 'lucide-react'
 import { COACH_PROVIDERS, type CoachCost, type CoachKeyId, type CoachProviderInfo } from '@shared/analysis'
 import type { AcAppStatus, DeepPartial, Settings } from '@shared/api'
 import { Button, Card, Label, PageHeader, Toggle } from '../components/ui'
@@ -235,7 +236,7 @@ export function SettingsPage({ focus }: { focus?: SettingsSection | null }) {
       <PageHeader title="Ajustes" />
       <div className="space-y-5">
         <Card id="ajustes-lan">
-          <Label>Red local</Label>
+          <Label icon={Wifi}>Red local</Label>
           <Field title="Dashboards en otros dispositivos" hint="Tablet o celular en el mismo wifi. Solo lectura.">
             <Toggle checked={s.lan.exposed} onChange={(v) => void save({ lan: { exposed: v } })} label="Dashboards en la red" />
           </Field>
@@ -251,7 +252,7 @@ export function SettingsPage({ focus }: { focus?: SettingsSection | null }) {
         </Card>
 
         <Card>
-          <Label>Aplicación</Label>
+          <Label icon={AppWindow}>Aplicación</Label>
           <Field
             title="Al cerrar, seguir en la bandeja"
             hint="La ventana se cierra y libera memoria; la tablet sigue recibiendo datos. Para salir: clic derecho en el ícono."
@@ -268,7 +269,7 @@ export function SettingsPage({ focus }: { focus?: SettingsSection | null }) {
         </Card>
 
         <Card id="ajustes-coach">
-          <Label>Coach</Label>
+          <Label icon={MessageSquareText}>Coach</Label>
           <Field title="Proveedor de IA" hint={coachInfo.hint}>
             <select
               value={s.coach.provider}
@@ -307,7 +308,7 @@ export function SettingsPage({ focus }: { focus?: SettingsSection | null }) {
 
 
         <Card>
-          <Label>Grabación de sesiones</Label>
+          <Label icon={HardDriveDownload}>Grabación de sesiones</Label>
           <Field title="Grabar Assetto Corsa" hint="AC no guarda telemetría: FTN Coach graba cada sesión para analizarla después.">
             <Toggle checked={s.recording.ac} onChange={(v) => void save({ recording: { ac: v } })} label="Grabar Assetto Corsa" />
           </Field>
@@ -320,12 +321,12 @@ export function SettingsPage({ focus }: { focus?: SettingsSection | null }) {
         </Card>
 
         <Card>
-          <Label>Assetto Corsa</Label>
+          <Label icon={Car}>Assetto Corsa</Label>
           <AcApp />
         </Card>
 
         <Card>
-          <Label>Carpetas</Label>
+          <Label icon={Folder}>Carpetas</Label>
           <Field title="Telemetría de iRacing" hint={s.paths.iracingTelemetry}>
             <Button
               onClick={async () => {

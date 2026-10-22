@@ -114,9 +114,15 @@ function drawGG(canvas: HTMLCanvasElement, h: History, colors: Record<string, st
   ctx.globalAlpha = 1
   if (n) {
     const [x, y] = pos(n - 1)
-    // Marcador de la marca: cuadrado, nunca círculo
+    // Punto actual: rombo, como los valores en los gráficos
     ctx.fillStyle = colors.now
-    ctx.fillRect(x - 6, y - 6, 12, 12)
+    ctx.beginPath()
+    ctx.moveTo(x, y - 8)
+    ctx.lineTo(x + 8, y)
+    ctx.lineTo(x, y + 8)
+    ctx.lineTo(x - 8, y)
+    ctx.closePath()
+    ctx.fill()
   }
 }
 

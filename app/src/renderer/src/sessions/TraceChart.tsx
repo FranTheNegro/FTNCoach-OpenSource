@@ -195,7 +195,7 @@ export function TraceChart({
               .filter((c) => inView(c.pct * (n - 1)))
               .map((c) => (
               <g key={c.label + c.pct}>
-                <rect x={X(c.pct * (n - 1)) - 3} y={2} width={6} height={6} fill={c.hot ? 'var(--ftn-alerta)' : 'var(--ftn-acero)'} />
+                <path d={`M${X(c.pct * (n - 1)) - 4} 2h8l-4 6Z`} fill={c.hot ? 'var(--ftn-alerta)' : 'var(--ftn-acero)'} />
                 <text x={X(c.pct * (n - 1)) + 6} y={9} fontSize={10} fill={c.hot ? 'var(--ftn-blanco)' : 'var(--ftn-niebla)'}>
                   {c.label}
                 </text>

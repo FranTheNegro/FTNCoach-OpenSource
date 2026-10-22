@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { SessionSummary } from '@shared/analysis'
+import { Activity, History, SlidersHorizontal, TrendingUp, User } from 'lucide-react'
 import { LogoHorizontal } from '@ui/Logo'
 import { NavContext, type Nav, type Route, type SettingsSection } from './nav'
 import { LivePage } from './pages/LivePage'
@@ -9,54 +10,11 @@ import { SessionsPage } from './pages/SessionsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 const NAV: { id: Route; label: string; icon: React.ReactNode }[] = [
-  {
-    id: 'live',
-    label: 'En vivo',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        <path d="M3 12h4l3-8 4 16 3-8h4" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    id: 'sessions',
-    label: 'Sesiones',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        <path d="M4 6h16M4 12h16M4 18h10" />
-      </svg>
-    ),
-  },
-  {
-    id: 'progress',
-    label: 'Progreso',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        <path d="M4 18l5-6 4 3 7-9" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    id: 'profile',
-    label: 'Perfil',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        <rect x="8" y="4" width="8" height="8" rx="4" />
-        <path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" />
-      </svg>
-    ),
-  },
-  {
-    id: 'settings',
-    label: 'Ajustes',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
-        <rect x="14" y="5" width="4" height="4" />
-        <rect x="8" y="15" width="4" height="4" />
-      </svg>
-    ),
-  },
+  { id: 'live', label: 'En vivo', icon: <Activity size={18} aria-hidden="true" /> },
+  { id: 'sessions', label: 'Sesiones', icon: <History size={18} aria-hidden="true" /> },
+  { id: 'progress', label: 'Progreso', icon: <TrendingUp size={18} aria-hidden="true" /> },
+  { id: 'profile', label: 'Perfil', icon: <User size={18} aria-hidden="true" /> },
+  { id: 'settings', label: 'Ajustes', icon: <SlidersHorizontal size={18} aria-hidden="true" /> },
 ]
 
 export function App() {

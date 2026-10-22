@@ -1,10 +1,10 @@
 /** Pantalla "Mapa": trazado con la posición del auto. */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { TrackMapResult } from '@shared/analysis'
 import type { LiveFrame, SessionMeta } from '@shared/live'
 import type { Units } from '@shared/api'
 import * as fmt from '@ui/format'
-import { TrackMapSvg } from '@ui/TrackMapSvg'
+import { headingOf, TrackMapSvg } from '@ui/TrackMapSvg'
 import { Map as MapIcon } from 'lucide-react'
 import { C, DASH, Ico, Lbl, signed } from './kit'
 import type { DashTracker } from './tracker'
@@ -30,6 +30,26 @@ function useTrackMap(meta: SessionMeta | null): TrackMapResult | null {
   return map
 }
 
+/** Sentido de marcha a partir de cómo se movió el auto en el mapa (se actualiza cada 2 m). */
+function useHeading(car: { x: number; y: number } | null): number | null {
+  const last = useRef<{ x: number; y: number } | null>(null)
+  const heading = useRef<number | null>(null)
+  if (!car) {
+    last.current = null
+    return heading.current
+  }
+  const from = last.current
+  if (!from) last.current = car
+  else {
+    const h = headingOf(from.x, from.y, car.x, car.y, 2)
+    if (h !== null) {
+      heading.current = h
+      last.current = car
+    } else if (Math.hypot(car.x - from.x, car.y - from.y) > 200) last.current = car
+  }
+  return heading.current
+}
+
 export function TrackMap({ f, meta, units, tracker }: { f: LiveFrame; meta: SessionMeta | null; units: Units; tracker: DashTracker }) {
   const res = useTrackMap(meta)
   const map = res?.map ?? null
@@ -40,6 +60,7 @@ export function TrackMap({ f, meta, units, tracker }: { f: LiveFrame; meta: Sess
     const p = map.pctLine[Math.max(0, Math.min(map.pctLine.length - 1, Math.round(f.lapPct * (map.pctLine.length - 1))))]
     car = { x: p[0], y: p[1] }
   }
+  const heading = useHeading(car)
   const empty = res ? res.note : meta?.trackId ? 'Cargando el mapa…' : 'Este simulador no informó el trazado.'
   const delta = f.deltaS
   const stats = [
@@ -53,7 +74,7 @@ export function TrackMap({ f, meta, units, tracker }: { f: LiveFrame; meta: Sess
     <main className="d2-body d2-map">
       <section className="d2-panel" style={{ minHeight: 0, padding: 14, overflow: 'hidden', background: C.carbono }}>
         {map ? (
-          <TrackMapSvg map={map} className="map-svg" markers={car ? [{ ...car, color: 'var(--ftn-azul)', size: 1.6 }] : []} />
+          <TrackMapSvg map={map} className="map-svg" markers={car ? [{ ...car, color: 'var(--ftn-azul)', size: 1.6, heading }] : []} />
         ) : (
           <div className="d2-empty">
             <Ico icon={MapIcon} size={34} color={C.niebla} />

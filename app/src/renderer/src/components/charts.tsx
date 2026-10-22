@@ -1,4 +1,5 @@
 /** Gráficos chicos de evolución (mejor vuelta por día). Más rápido = más arriba. */
+import { DIAMOND_PATH } from '@ui/icons'
 import * as fmt from '@ui/format'
 import { useWidth } from '../hooks'
 
@@ -15,7 +16,7 @@ export function Sparkline({ values, height = 44, color = 'var(--ftn-azul)' }: { 
         <svg width={w} height={height} className="block">
           <path d={values.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join('')} fill="none" stroke={color} strokeWidth={2} />
           {values.map((v, i) => (
-            <rect key={i} x={X(i) - (i === pb ? 4 : 2.5)} y={Y(v) - (i === pb ? 4 : 2.5)} width={i === pb ? 8 : 5} height={i === pb ? 8 : 5} fill={i === pb ? 'var(--ftn-mejor)' : color} />
+            <path key={i} d={DIAMOND_PATH} transform={`translate(${X(i)} ${Y(v)}) scale(${i === pb ? 10 : 7})`} fill={i === pb ? 'var(--ftn-mejor)' : color} />
           ))}
         </svg>
       )}
@@ -62,9 +63,9 @@ export function BestLapChart({ points, height = 260 }: { points: { label: string
             const s = isPb ? 9 : 6
             return (
               <g key={i}>
-                <rect x={X(i) - s / 2} y={Y(p.bestS) - s / 2} width={s} height={s} fill={isPb ? 'var(--ftn-mejor)' : 'var(--ftn-azul)'}>
+                <path d={DIAMOND_PATH} transform={`translate(${X(i)} ${Y(p.bestS)}) scale(${s * 1.3})`} fill={isPb ? 'var(--ftn-mejor)' : 'var(--ftn-azul)'}>
                   <title>{`${p.label} · ${fmt.lapTime(p.bestS)}`}</title>
-                </rect>
+                </path>
                 {i % every === 0 && (
                   <text x={X(i)} y={height - 8} fontSize={11} fill="var(--ftn-niebla)" textAnchor="middle">
                     {p.label}

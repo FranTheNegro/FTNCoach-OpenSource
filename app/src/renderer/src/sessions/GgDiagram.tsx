@@ -3,6 +3,7 @@
  * la referencia. Cuanto más llena el círculo, más grip usa el piloto; los huecos
  * entre frenada y curva son el trail-braking que falta.
  */
+import { LineSwatch, Tyre } from '@ui/icons'
 import { useEffect, useMemo, useRef } from 'react'
 import type { LapTrace } from '@shared/analysis'
 import { useWidth } from '../hooks'
@@ -149,12 +150,12 @@ export function GgDiagram({
           <div className="flex gap-4 data text-[12px] text-plata">
             {labelB && (
               <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5" style={{ background: B }} />
+                <LineSwatch color={B} />
                 {labelB}
               </span>
             )}
             <span className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5" style={{ background: A }} />
+              <LineSwatch color={A} />
               {labelA}
             </span>
           </div>
@@ -164,7 +165,7 @@ export function GgDiagram({
         </div>
       </section>
       <aside className="w-[380px] shrink-0 bg-carbono-2 border border-grafito rounded-panel px-5 py-4">
-        <Label>Uso del grip</Label>
+        <Label icon={Tyre}>Uso del grip</Label>
         <table className="w-full mt-3 data text-[13px]">
           <thead>
             <tr className="text-niebla text-[11px] tracking-[0.08em] uppercase">

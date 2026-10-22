@@ -1,6 +1,7 @@
 // Primitivas del manual §6: botones de 44 px, radios 6/10/14/20, tarjetas
-// carbono 2 + grafito, sin sombras, etiquetas mono con el cuadradito.
+// carbono 2 + grafito, sin sombras, etiquetas mono con el ícono de lo que encabezan.
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { LucideIcon } from 'lucide-react'
 
 type Variant = 'primary' | 'secondary' | 'ghost'
 
@@ -31,10 +32,10 @@ export function Card({ children, className = '', id }: { children: ReactNode; cl
   )
 }
 
-export function Label({ children, color }: { children: ReactNode; color?: string }) {
+export function Label({ children, color, icon: Icon }: { children: ReactNode; color?: string; icon?: LucideIcon }) {
   return (
     <span className="data inline-flex items-center gap-2 text-[11px] tracking-[0.12em] uppercase text-niebla" style={color ? { color } : undefined}>
-      <span className="w-[7px] h-[7px] bg-current shrink-0" />
+      {Icon && <Icon size={14} className="shrink-0" aria-hidden="true" />}
       {children}
     </span>
   )

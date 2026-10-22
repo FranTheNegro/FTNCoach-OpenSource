@@ -2,7 +2,9 @@
  * Progreso: la evolución de tu mejor vuelta en cada auto y pista, con las
  * sesiones de esta PC.
  */
+import { Database } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { LineSwatch } from '@ui/icons'
 import type { SessionSummary } from '@shared/analysis'
 import { historicalIdeal } from '@shared/history'
 import * as fmt from '@ui/format'
@@ -160,7 +162,7 @@ export function ProgressPage() {
   return (
     <div className="max-w-[1300px]">
       <PageHeader title="Progreso">
-        <Label>{source}</Label>
+        <Label icon={Database}>{source}</Label>
       </PageHeader>
 
       <div className="grid grid-cols-4 gap-4 mb-5">
@@ -197,11 +199,11 @@ export function ProgressPage() {
                 </div>
                 <div className="flex gap-4 data text-[12px] text-plata shrink-0">
                   <span className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 bg-azul" />
+                    <LineSwatch color="var(--ftn-azul)" />
                     MEJOR VUELTA POR DÍA
                   </span>
                   <span className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 bg-mejor" />
+                    <LineSwatch color="var(--ftn-mejor)" width={1.5} dashed />
                     PB
                   </span>
                 </div>

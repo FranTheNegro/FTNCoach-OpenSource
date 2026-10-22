@@ -46,19 +46,6 @@ body,
   gap: 0.6em;
 }
 
-/* Marcador de la marca: el cuadradito */
-.label::before {
-  content: '';
-  width: 0.55em;
-  height: 0.55em;
-  background: currentColor;
-  flex: none;
-}
-
-.label.plain::before {
-  display: none;
-}
-
 /* ── Estructura ───────────────────────────────────────────────────────── */
 
 .dash {
@@ -658,20 +645,6 @@ body,
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 34vw;
-}
-
-.dot {
-  width: 9px;
-  height: 9px;
-  flex: none;
-  background: var(--ftn-acero);
-}
-
-.dot.on {
-  background: var(--ftn-record);
-}
-.dot.wait {
-  background: var(--ftn-alerta);
 }
 
 .icon-btn {

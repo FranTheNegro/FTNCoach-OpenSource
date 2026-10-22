@@ -2,6 +2,7 @@
  * Evolución de la sesión: una barra por vuelta (todas, también las inválidas y
  * las cortadas) con la mejor y la mediana de referencia, y el ritmo resumido.
  */
+import { BarSwatch } from '@ui/icons'
 import type { LapInfo, SessionDetail } from '@shared/analysis'
 import { LAP_KIND_LABEL } from '@shared/live'
 import * as fmt from '@ui/format'
@@ -115,12 +116,12 @@ export function LapChart({ d, selected, onSelect }: { d: SessionDetail; selected
           ] as const
         ).map(([c, t]) => (
           <span key={t} className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5" style={{ background: c }} />
+            <BarSwatch color={c} />
             {t}
           </span>
         ))}
         <span className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 border border-dashed border-niebla" />
+          <BarSwatch color="var(--ftn-niebla)" outline />
           cortada
         </span>
         <span className="text-niebla">línea punteada: mediana · tocá una barra para analizar esa vuelta</span>

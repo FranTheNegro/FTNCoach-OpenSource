@@ -1,4 +1,5 @@
 /** Setup del auto tal como lo guardó iRacing en el .ibt (valores reales, sin inventar nada). */
+import { Wrench } from 'lucide-react'
 import type { SetupGroup } from '@shared/analysis'
 import { Card, Label } from '../components/ui'
 
@@ -6,7 +7,7 @@ export function SetupView({ setup }: { setup: SetupGroup[] | null }) {
   if (!setup)
     return (
       <Card className="max-w-[720px]">
-        <Label>Setup</Label>
+        <Label icon={Wrench}>Setup</Label>
         <p className="text-plata mt-3 leading-relaxed">
           Esta sesión no trae el setup del auto. iRacing lo guarda en el <span className="data">.ibt</span>; Assetto Corsa no lo expone a otras
           aplicaciones.
