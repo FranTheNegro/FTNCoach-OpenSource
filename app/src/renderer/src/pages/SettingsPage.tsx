@@ -206,9 +206,9 @@ function AcApp() {
   let hint: string
   if (!st.acFound) hint = 'No se encontró Assetto Corsa instalado con Steam.'
   else if (!st.csp) hint = 'La app necesita Custom Shaders Patch (CSP). Instalalo con Content Manager y volvé.'
-  else if (st.installed && st.installed === st.bundled) hint = `Instalada (v${st.installed}). En el juego, cada overlay aparece en la barra de apps como “FTN Coach · …”.`
-  else if (st.installed) hint = `Instalada la v${st.installed}; esta versión de FTN Coach trae la v${st.bundled}, con overlays nuevos.`
-  else hint = 'Overlays en vivo dentro del juego con el diseño del dashboard: delta, tacómetro, inputs, tiempos, relative, neumáticos, auto, vueltas, mapa, radar y banderas, más el consejo de la próxima curva.'
+  else if (st.installed && st.installed === st.bundled) hint = `Instalada (v${st.installed}). En el juego abrí “FTN Coach” en la barra de apps: detecta la categoría del auto y acomoda los overlays por vos.`
+  else if (st.installed) hint = `Instalada la v${st.installed}; esta versión de FTN Coach trae la v${st.bundled}, con layouts según la categoría del auto.`
+  else hint = 'Overlays en vivo dentro del juego con el diseño del dashboard: delta, tacómetro, inputs, tiempos, relative, neumáticos, auto, vueltas, mapa, radar y banderas, más el consejo de la próxima curva. Se acomodan solos según la categoría del auto (Fórmula, GT, Turismo, Rally…).'
   return (
     <Field title="App dentro del juego" hint={hint}>
       {err && <span className="text-error text-[13px]">{err}</span>}

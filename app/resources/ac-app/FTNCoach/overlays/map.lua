@@ -29,15 +29,16 @@ local function toMap(pos)
   return (pos.x + c.X_OFFSET) / c.SCALE_FACTOR, (pos.z + c.Z_OFFSET) / c.SCALE_FACTOR
 end
 
+local DW = 300
+
 function M.draw()
-  local size = ui.windowSize()
-  local s = D.begin(300, 300)
+  local s = D.begin(DW, DW)
   if not map then map = load() end
   if map.missing then
-    D.empty(size.x / s, size.y / s, 'Este circuito no trae mapa', 'Falta map.png o data/map.ini en la carpeta del circuito.')
+    D.empty(DW, DW, 'Este circuito no trae mapa', 'Falta map.png o data/map.ini en la carpeta del circuito.')
     return
   end
-  D.panel(0, 0, size.x / s, size.y / s)
+  D.panel(0, 0, DW, DW)
 
   local iw, ih = map.cfg.WIDTH, map.cfg.HEIGHT
   if iw <= 0 or ih <= 0 then
@@ -47,9 +48,11 @@ function M.draw()
     if iw <= 0 then return end
   end
   local pad = 10 * s
-  local k = math.min((size.x - 2 * pad) / iw, (size.y - 2 * pad) / ih)
-  local ox = (size.x - iw * k) / 2
-  local oy = (size.y - ih * k) / 2
+  local side = DW * s
+  local o = D.P(0, 0)
+  local k = math.min((side - 2 * pad) / iw, (side - 2 * pad) / ih)
+  local ox = o.x + (side - iw * k) / 2
+  local oy = o.y + (side - ih * k) / 2
   ui.drawImage(map.png, vec2(ox, oy), vec2(ox + iw * k, oy + ih * k), T.alpha(C.plata, 0.85))
 
   local function at(pos)

@@ -7,6 +7,7 @@ local T = require('lib.theme')
 local D = require('lib.draw')
 local config = require('lib.config')
 local live = require('lib.live')
+local layout = require('lib.layout')
 
 local M = {}
 local C = T.C
@@ -43,7 +44,7 @@ function M.draw(dt)
 
   if not label then
     -- Sin bandera queda invisible; al pasar el mouse se ve dónde está para moverla
-    if ui.windowHovered() then D.empty(DW, DH, 'Banderas') end
+    if ui.windowHovered() or layout.editing then D.empty(DW, DH, 'Banderas', 'Aparece solo cuando hay una bandera') end
     return
   end
   -- Las banderas que piden atención "flamean" (pulso de opacidad)

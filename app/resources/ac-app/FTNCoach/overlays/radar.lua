@@ -8,6 +8,7 @@ local T = require('lib.theme')
 local D = require('lib.draw')
 local config = require('lib.config')
 local live = require('lib.live')
+local layout = require('lib.layout')
 
 local M = {}
 local C = T.C
@@ -50,10 +51,11 @@ function M.draw()
   end
 
   local hovered = ui.windowHovered()
-  if config.s.radarAuto and #cars == 0 and not hovered then return end
+  if config.s.radarAuto and #cars == 0 and not hovered and not layout.editing then return end
 
   D.panel(0, 0, DW, DH, 110)
-  local cx, cy = DW / 2 * s, DH / 2 * s
+  local c = D.P(DW / 2, DH / 2)
+  local cx, cy = c.x, c.y
   local k = (DW / 2 - 12) * s / range
   -- Anillos de distancia
   ui.drawCircle(vec2(cx, cy), range * k, C.grafito, 40, 1 * s)

@@ -1,4 +1,4 @@
---[[ Coche: combustible (con lo que falta o sobra para el final) y ajustes en pista. ]]
+--[[ Auto: combustible (con lo que falta o sobra para el final) y ajustes en pista. ]]
 
 local T = require('lib.theme')
 local D = require('lib.draw')

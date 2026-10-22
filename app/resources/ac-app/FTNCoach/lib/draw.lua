@@ -1,7 +1,10 @@
 --[[
   Dibujo en coordenadas de diseño. Cada overlay se diseña en un tamaño fijo
-  (por ejemplo 360 × 120) y se escala al tamaño de su ventana: para agrandarlo
-  alcanza con estirar la ventana desde la esquina.
+  (por ejemplo 360 × 120) y se dibuja a la escala que le da su layout; la ventana
+  se ajusta sola a ese tamaño (lib/layout.lua).
+
+  Como en CMRT Complete HUD, el contenido arranca 22 px más abajo: AC reserva esa
+  franja arriba de cada ventana para su barra, que aparece solo al pasar el mouse.
 ]]
 
 local T = require('lib.theme')
@@ -12,21 +15,32 @@ local s = 1
 local A = ui.Alignment
 
 D.A = A
+D.TOP = 22
+local TOP = D.TOP
 
 local function P(x, y)
-  return vec2(x * s, y * s)
+  return vec2(x * s, TOP + y * s)
 end
 D.P = P
 
+--- Escala del overlay que se va a dibujar (unidades de UI por unidad de diseño).
+function D.setScale(k)
+  s = k
+end
+
 --- Empieza a dibujar un overlay de `dw × dh` unidades. Devuelve la escala.
 function D.begin(dw, dh)
-  local size = ui.windowSize()
-  s = math.max(0.2, math.min(size.x / dw, size.y / dh))
+  D.w, D.h = dw, dh
   return s
 end
 
 function D.scale()
   return s
+end
+
+--- Tamaño de ventana que necesita el overlay dibujado (en unidades de UI).
+function D.windowSize()
+  return vec2((D.w or 0) * s, TOP + (D.h or 0) * s)
 end
 
 --- Fondo del overlay con la opacidad elegida en los ajustes.

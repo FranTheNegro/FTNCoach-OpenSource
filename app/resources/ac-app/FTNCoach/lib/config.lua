@@ -1,7 +1,7 @@
 --[[
   Ajustes de la app (se guardan solos en Documents\Assetto Corsa\cfg\extension\state\lua).
-  Cada overlay tiene su sección, que se abre con el engranaje de su ventana; la
-  ventana principal muestra además los generales.
+  Cada overlay tiene su sección, que se ve en su página del centro de control
+  (la ventana "FTN Coach" de la barra de apps).
 ]]
 
 local M = {}
@@ -12,6 +12,12 @@ M.s = ac.storage({
   units = 0, -- 0 = como en FTN Coach, 1 = métrico, 2 = imperial
   opacity = 0.88,
   accent = 1,
+  -- Layout
+  layoutAsked = false, -- ya se eligió en la bienvenida qué hacer con los layouts
+  layoutAuto = true, -- según el auto (si no, siempre layoutFixed)
+  layoutFixed = '',
+  layoutLast = '', -- última categoría aplicada (para avisar cuando cambia)
+  layoutScale = 1,
   -- Coach
   tips = true,
   focus = true,
@@ -30,7 +36,7 @@ M.s = ac.storage({
   -- Tiempos
   timingSectors = true,
   timingIdeal = true,
-  -- Relativo
+  -- Relative
   relRows = 3,
   relPit = true,
   -- Neumáticos
@@ -83,7 +89,6 @@ end
 local SECTIONS = {}
 
 function SECTIONS.general(link, T)
-  ui.header('General')
   ui.text('Puerto de FTN Coach (en la PC: Ajustes → Red local):')
   local port, changed = ui.inputText('##port', tostring(math.floor(s.port)), ui.InputTextFlags.CharsDecimal)
   if changed and tonumber(port) then s.port = tonumber(port) end
@@ -97,31 +102,25 @@ function SECTIONS.general(link, T)
     if i > 1 then ui.sameLine() end
     if ui.radioButton(a[1], math.floor(s.accent) == i) then s.accent = i end
   end
-  ui.offsetCursorY(4)
-  ui.textWrapped('Para agrandar o achicar un overlay, estirá su ventana desde la esquina. Se activan desde la barra de apps de la derecha.')
 end
 
 function SECTIONS.coach()
-  ui.header('Coach')
   check('Consejo de la próxima curva (de tus sesiones analizadas)', 'tips')
   check('Foco de la sesión según tu estilo de manejo', 'focus')
   check('Avisos del momento (combustible, gomas, frenos)', 'advice')
 end
 
 function SECTIONS.delta()
-  ui.header('Delta')
   slider('Rango de la barra (s)', 'deltaRange', 0.25, 3, '%.2f s')
 end
 
 function SECTIONS.tacho()
-  ui.header('Tacómetro')
   check('Shift lights', 'tachoLights')
   check('RPM en números', 'tachoRpm')
   check('TC, ABS, DRS y limitador', 'tachoAids')
 end
 
 function SECTIONS.inputs()
-  ui.header('Inputs')
   check('Traza de los últimos segundos', 'inputsTrace')
   slider('Segundos de traza', 'inputsSeconds', 2, 10, '%.0f s', true)
   check('Embrague', 'inputsClutch')
@@ -129,19 +128,16 @@ function SECTIONS.inputs()
 end
 
 function SECTIONS.timing()
-  ui.header('Tiempos')
   check('Sectores', 'timingSectors')
   check('Vuelta ideal (suma de tus mejores sectores)', 'timingIdeal')
 end
 
 function SECTIONS.relative()
-  ui.header('Relative')
   slider('Autos adelante y atrás', 'relRows', 1, 6, '%.0f', true)
   check('Mostrar autos en boxes', 'relPit')
 end
 
 function SECTIONS.tyres()
-  ui.header('Neumáticos')
   check('Temperatura por zona (interior, centro, exterior)', 'tyresZones')
   check('Presión', 'tyresPressure')
   check('Desgaste', 'tyresWear')
@@ -149,40 +145,31 @@ function SECTIONS.tyres()
 end
 
 function SECTIONS.laps()
-  ui.header('Vueltas')
   slider('Vueltas en la lista', 'lapsCount', 3, 10, '%.0f', true)
 end
 
 function SECTIONS.map()
-  ui.header('Mapa')
   check('Nombres de los pilotos', 'mapNames')
   check('Marcar la curva del próximo consejo', 'mapTips')
   slider('Tamaño de los autos', 'mapDot', 0.5, 2, '%.1f×')
 end
 
 function SECTIONS.radar()
-  ui.header('Radar')
   slider('Alcance (m)', 'radarRange', 6, 30, '%.0f m', true)
   check('Mostrar solo cuando hay un auto cerca', 'radarAuto')
 end
 
 function SECTIONS.flags()
-  ui.header('Banderas')
   check('Avisar cuando el limitador de boxes está puesto', 'flagsLimiter')
 end
 
-M.ORDER = { 'general', 'coach', 'delta', 'tacho', 'inputs', 'timing', 'relative', 'tyres', 'laps', 'map', 'radar', 'flags' }
+function M.has(id)
+  return SECTIONS[id] ~= nil
+end
 
---- Dibuja la sección de un overlay (o todas, si `id` es nil).
+--- Dibuja las opciones de un overlay (o las generales, con `id` = 'general').
 function M.ui(id, link, T)
-  if id then
-    SECTIONS[id](link, T)
-    return
-  end
-  for _, k in ipairs(M.ORDER) do
-    SECTIONS[k](link, T)
-    ui.offsetCursorY(8)
-  end
+  SECTIONS[id](link, T)
 end
 
 return M

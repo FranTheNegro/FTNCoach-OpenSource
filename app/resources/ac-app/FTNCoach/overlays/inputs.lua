@@ -19,13 +19,12 @@ end
 
 local function path(arr, count, x, y, w, h, scale, color, th)
   if count < 2 then return end
-  local s = D.scale()
   local step = count > 160 and 2 or 1
   for k = 1, count, step do
     local v = T.clamp(scale(live.traceAt(arr, count, k)), 0, 1)
-    ui.pathLineTo(vec2((x + (k - 1) / (count - 1) * w) * s, (y + h - v * (h - 2) - 1) * s))
+    ui.pathLineTo(D.P(x + (k - 1) / (count - 1) * w, y + h - v * (h - 2) - 1))
   end
-  ui.pathStroke(color, false, th * s)
+  ui.pathStroke(color, false, th * D.scale())
 end
 
 function M.draw()

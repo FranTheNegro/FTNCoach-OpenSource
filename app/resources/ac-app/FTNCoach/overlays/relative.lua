@@ -24,8 +24,7 @@ local function row(r, y, me, trend)
     -- Degradé de la tendencia, de izquierda a derecha
     local col = TREND[trend.kind]
     local a = 0.1 + 0.18 * trend.strength
-    local s = D.scale()
-    ui.drawRectFilledMultiColor(vec2(4 * s, y * s), vec2((DW - 4) * s, (y + ROW - 2) * s), T.alpha(col, a), T.alpha(col, 0), T.alpha(col, 0), T.alpha(col, a))
+    ui.drawRectFilledMultiColor(D.P(4, y), D.P(DW - 4, y + ROW - 2), T.alpha(col, a), T.alpha(col, 0), T.alpha(col, 0), T.alpha(col, a))
   end
   -- Otros en la misma vuelta en blanco; los que te sacan vuelta en rojo y a los que les sacás, en azul
   local nameColor = C.blanco
