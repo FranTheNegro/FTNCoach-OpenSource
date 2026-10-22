@@ -3,6 +3,8 @@
 Telemetría en vivo y coach de sim racing para **iRacing** y **Assetto Corsa**.
 Open source (MIT).
 
+https://github.com/user-attachments/assets/02101a69-b295-483a-9d80-0f3c93866182
+
 ## Para el piloto
 
 1. Bajá `FTN-Coach-Setup-x.y.z.exe` de [Releases](https://github.com/FranTheNegro/FTNCoach-OpenSource/releases/latest)
