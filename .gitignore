@@ -23,3 +23,6 @@ build/
 
 # Skills de agentes (se reinstalan con los comandos de AGENTS.md)
 .claude/skills/
+
+# Grabaciones del sondeo de ACR (app/scripts/sondeo-acr.mjs)
+sondeo-acr-*.jsonl
