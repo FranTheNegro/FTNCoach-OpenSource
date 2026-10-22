@@ -111,6 +111,7 @@ export function rivalsOf(r: RowReader, ctx: IrContext, lapRefS: number): Rivals 
       irating: d.irating,
       position: position !== null && position > 0 ? position : null,
       gapS: gap,
+      lapPct: pct,
       lastLapS: positive(r.num('CarIdxLastLapTime', d.idx)),
       bestLapS: positive(r.num('CarIdxBestLapTime', d.idx)),
       inPit: (r.num('CarIdxOnPitRoad', d.idx) ?? 0) > 0,

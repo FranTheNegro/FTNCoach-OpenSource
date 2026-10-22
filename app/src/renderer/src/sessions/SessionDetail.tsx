@@ -14,6 +14,7 @@ import { GgDiagram } from './GgDiagram'
 import { SetupView } from './SetupView'
 import { VideoTab } from './VideoTab'
 import { MapPanel } from './MapPanel'
+import { keyPoints } from './keyPoints'
 import { CornersTable } from './CornersTable'
 import { LapChart } from './LapChart'
 import { sessionLabel } from '@shared/events'
@@ -505,6 +506,13 @@ function Analysis({
     }
   }
   const focus = cmp && range ? bounds([cmp.a.x, cmp.b.x], [cmp.a.y, cmp.b.y], range[0], range[1]) : null
+  // Puntos clave: las curvas del tramo elegido o, sin tramo, las de los consejos
+  const pointCorners = !cmp
+    ? []
+    : range
+      ? d.corners.filter((c) => c.apexPct * (n - 1) >= range[0] && c.apexPct * (n - 1) <= range[1]).map((c) => c.id)
+      : cmp.insights.map((i) => i.cornerId)
+  const points = cmp ? keyPoints(d, cmp, pointCorners) : []
   const totalDelta = cmp ? cmp.delta.filter(Number.isFinite).at(-1) : null
   const rangeDelta = cmp && range ? (cmp.delta[range[1]] ?? NaN) - (cmp.delta[range[0]] ?? NaN) : null
 
@@ -512,7 +520,7 @@ function Analysis({
     <div className="flex flex-col gap-5">
       {cmp && (mapLines || d.map.map) && (
         <section className="bg-carbono-2 border border-grafito rounded-panel px-6 py-5 flex flex-col gap-2">
-          <MapPanel d={d} cmp={cmp} markers={markers} focus={focus} labelA={`V${A?.lap}`} labelB={refLabel} />
+          <MapPanel d={d} cmp={cmp} markers={markers} points={points} focus={focus} labelA={`V${A?.lap}`} labelB={refLabel} />
           <p className="text-[12px] text-niebla leading-snug">{d.map.note}</p>
         </section>
       )}

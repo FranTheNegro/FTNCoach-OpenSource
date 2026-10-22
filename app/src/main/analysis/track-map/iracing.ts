@@ -95,8 +95,11 @@ async function getSvg(url: string): Promise<string | null> {
  * publica mapa. Sin red tira error y se reintenta la próxima vez.
  */
 export async function ensureIracingSvgs(dir: string, id: string, slug: string | null): Promise<string | null> {
-  if (existsSync(join(dir, 'active.svg'))) return dir
   const metaFile = join(dir, 'meta.json')
+  if (existsSync(join(dir, 'active.svg'))) {
+    await ensurePitRoad(dir, metaFile)
+    return dir
+  }
   if (existsSync(metaFile)) {
     const meta = JSON.parse(readFileSync(metaFile, 'utf8'))
     if (meta.missing && Date.now() - statSync(metaFile).mtimeMs < RETRY_MISSING_MS) return null
@@ -109,16 +112,26 @@ export async function ensureIracingSvgs(dir: string, id: string, slug: string | 
     if (!active) continue
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, 'active.svg'), active)
-    for (const layer of ['start-finish', 'turns']) {
+    for (const layer of ['start-finish', 'turns', 'pitroad']) {
       const extra = await getSvg(`${MAP_BASE_URL}${path}/${layer}.svg`).catch(() => null)
       if (extra) writeFileSync(join(dir, `${layer}.svg`), extra)
     }
-    writeFileSync(metaFile, JSON.stringify({ id, slug, path }, null, 2))
+    writeFileSync(metaFile, JSON.stringify({ id, slug, path, pitTried: true }, null, 2))
     return dir
   }
   mkdirSync(dir, { recursive: true })
   writeFileSync(metaFile, JSON.stringify({ id, slug, missing: true, tried }, null, 2))
   return null
+}
+
+/** Los mapas bajados antes no traían la calle de boxes: se pide una sola vez. */
+async function ensurePitRoad(dir: string, metaFile: string): Promise<void> {
+  if (existsSync(join(dir, 'pitroad.svg')) || !existsSync(metaFile)) return
+  const meta = JSON.parse(readFileSync(metaFile, 'utf8'))
+  if (meta.pitTried || !meta.path) return
+  const svg = await getSvg(`${MAP_BASE_URL}${meta.path}/pitroad.svg`).catch(() => null)
+  if (svg) writeFileSync(join(dir, 'pitroad.svg'), svg)
+  writeFileSync(metaFile, JSON.stringify({ ...meta, pitTried: true }, null, 2))
 }
 
 // ── Registro dibujo ↔ GPS ───────────────────────────────────────────────────
@@ -335,6 +348,8 @@ export function iracingGeometry(dir: string, align: IracingAlign): TrackGeometry
 
   const sfSvg = readOpt(join(dir, 'start-finish.svg'))
   const startFinish = sfSvg ? svgContours(sfSvg, 1).map((c) => c.map((p) => screen(toM(sim, p)))) : []
+  const pitSvg = readOpt(join(dir, 'pitroad.svg'))
+  const pitLane = pitSvg ? svgContours(pitSvg, 1).map((c) => c.map((p) => screen(toM(sim, p)))) : []
   const turnsSvg = readOpt(join(dir, 'turns.svg'))
   const labels = turnsSvg
     ? svgLabels(turnsSvg).map((l) => {
@@ -352,6 +367,7 @@ export function iracingGeometry(dir: string, align: IracingAlign): TrackGeometry
     widthM: Math.round(width * 10) / 10,
     widthNote: note,
     pctLine: align.pctLine,
+    pitLane,
     bounds: boundsOf(asphalt),
   }
 }

@@ -52,6 +52,8 @@ export interface RivalCar {
    * negativo = va atrás. Para tu propio auto es 0.
    */
   gapS: number
+  /** Posición en la vuelta 0..1 (para ubicarlo en el mapa). */
+  lapPct?: number
   lastLapS: number | null
   bestLapS: number | null
   inPit: boolean

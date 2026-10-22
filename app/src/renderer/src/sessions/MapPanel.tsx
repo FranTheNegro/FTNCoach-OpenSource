@@ -79,6 +79,7 @@ export function MapPanel({
   d,
   cmp,
   markers,
+  points,
   focus,
   labelA,
   labelB,
@@ -86,12 +87,15 @@ export function MapPanel({
   d: SessionDetail
   cmp: CompareResult
   markers: MapMarker[]
+  /** Frenada, turn-in, vértice y gas de las curvas elegidas (reemplazan a los marcadores de consejo). */
+  points: MapMarker[]
   focus: { minX: number; minY: number; maxX: number; maxY: number } | null
   labelA: string
   labelB: string
 }) {
   const [mode, setMode] = useState<Mode>('lines')
   const [big, setBig] = useState(false)
+  const [showPoints, setShowPoints] = useState(true)
   const stepM = d.distM[1] ?? 2
   const colors = useMemo(() => colorsFor(mode, cmp, stepM), [mode, cmp, stepM])
 
@@ -147,6 +151,14 @@ export function MapPanel({
             {mode === 'delta' && <span className="text-niebla">{labelA} contra {labelB}</span>}
           </>
         )}
+        <button
+          onClick={() => setShowPoints(!showPoints)}
+          aria-pressed={showPoints}
+          title="Frenada, turn-in, vértice y gas de cada curva, con la diferencia contra la referencia"
+          className={`h-8 px-3 rounded-chip ${showPoints ? 'bg-ultramar text-blanco' : 'bg-carbono text-plata hover:text-blanco'}`}
+        >
+          Puntos clave
+        </button>
         <button onClick={() => setBig(!big)} className="h-8 px-3 rounded-chip bg-carbono text-plata hover:text-blanco">
           {big ? 'Cerrar' : 'Ampliar'}
         </button>
@@ -154,7 +166,8 @@ export function MapPanel({
     </div>
   )
 
-  const svg = (cls: string) => <TrackMapSvg className={cls} map={d.map.map} focus={focus} lines={lines} markers={markers} />
+  const shown = showPoints && points.length ? [...markers.filter((m) => !m.icon), ...points] : markers
+  const svg = (cls: string) => <TrackMapSvg className={cls} map={d.map.map} focus={focus} lines={lines} markers={shown} sectorsPct={d.sectorsPct} />
 
   return (
     <>

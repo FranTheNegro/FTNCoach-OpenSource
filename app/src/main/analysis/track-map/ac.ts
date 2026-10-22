@@ -165,6 +165,18 @@ export function acGeometry(root: string, trackId: string): TrackGeometry | null 
     return { text: s.name, x, y, turn: null }
   })
 
+  // Calle de boxes: la línea de la IA en boxes (mismo formato que fast_lane.ai)
+  const pitFile = [join(dirs.layout, 'ai', 'pit_lane.ai'), join(dirs.base, 'ai', 'pit_lane.ai')].find(existsSync)
+  let pitLane: Point[][] = []
+  if (pitFile)
+    try {
+      const pit = parseFastLane(readFileSync(pitFile))
+      const pitStep = Math.max(1, Math.round(pit.length / 600))
+      pitLane = [pit.filter((_, i) => i % pitStep === 0).map((p): Point => [p.x, p.z])]
+    } catch {
+      // pit_lane.ai con otro formato: el mapa sale sin boxes
+    }
+
   const sorted = widths.slice().sort((a, b) => a - b)
   const widthM = sorted.length ? Math.round(sorted[sorted.length >> 1] * 10) / 10 : null
   const startFinish = hasSides ? [[left[0], right[0]]] : []
@@ -177,6 +189,7 @@ export function acGeometry(root: string, trackId: string): TrackGeometry | null 
     widthM,
     widthNote: hasSides ? 'Bordes del propio trazado de AC' : 'Este trazado no trae bordes: se muestra solo la línea',
     pctLine,
+    pitLane,
     bounds: boundsOf(shape),
   }
 }

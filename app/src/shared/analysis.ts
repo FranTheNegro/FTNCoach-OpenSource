@@ -95,6 +95,8 @@ export interface CornerPass {
   fullThrottleM: number | null
   /** Donde mínima la velocidad. */
   minM: number
+  /** Donde empieza a doblar (el volante pasa un tercio del máximo de la curva). */
+  turnInM?: number | null
   offTrack: boolean
 }
 
@@ -124,6 +126,8 @@ export interface TrackGeometry {
   labels: { text: string; x: number; y: number; turn: number | null }[]
   widthM: number | null
   widthNote: string
+  /** Calle de boxes (líneas), si el mapa la trae. */
+  pitLane?: Point[][]
   /** Posición típica en cada punto de la vuelta (para ubicar el auto con lapPct). */
   pctLine: Point[] | null
   bounds: { minX: number; minY: number; maxX: number; maxY: number }
@@ -232,6 +236,9 @@ export interface CompareResult {
   /** Tiempo de A menos B en cada punto de la grilla (positivo = A pierde). */
   delta: number[]
   insights: Insight[]
+  /** Cómo pasó cada vuelta por cada curva (en el orden de `SessionDetail.corners`). */
+  passesA: (CornerPass | null)[]
+  passesB: (CornerPass | null)[]
 }
 
 export interface LibraryState {

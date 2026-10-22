@@ -243,6 +243,17 @@ function cornerPass(lap: GridLap, c: CornerSeg, step: number): CornerPass | null
     }
   }
   if (brakeIdx === null && lap.brake[from] >= BRAKE_ON) brakeIdx = from
+  // Turn-in: el volante pasa un tercio del máximo entre el inicio de la curva y la mínima
+  const from2 = brakeIdx ?? a
+  let peak = 0
+  for (let k = from2; k <= minIdx; k++) peak = Math.max(peak, Math.abs(lap.steer[k]))
+  let turnIdx: number | null = null
+  if (peak > 0.02)
+    for (let k = from2; k <= minIdx; k++)
+      if (Math.abs(lap.steer[k]) >= peak / 3) {
+        turnIdx = k
+        break
+      }
   let throttleIdx: number | null = null
   for (let k = minIdx; k <= b; k++)
     if (lap.throttle[k] >= FULL_THROTTLE) {
@@ -259,6 +270,7 @@ function cornerPass(lap: GridLap, c: CornerSeg, step: number): CornerPass | null
     brakeM: brakeIdx !== null ? brakeIdx * step : null,
     fullThrottleM: throttleIdx !== null ? throttleIdx * step : null,
     minM: minIdx * step,
+    turnInM: turnIdx !== null ? turnIdx * step : null,
     offTrack: off,
   }
 }
@@ -518,7 +530,7 @@ function compareGrid(p: Prepared, ia: number, B: GridLap, ib: number, passesB: (
     .filter((x): x is Insight => x !== null && x.lossS > 0.02)
     .sort((x, y) => y.lossS - x.lossS)
     .slice(0, 3)
-  return { a: lapTrace(p, ia), b: gridTrace(B, ib), refLabel, delta, insights }
+  return { a: lapTrace(p, ia), b: gridTrace(B, ib), refLabel, delta, insights, passesA: passes[ia], passesB }
 }
 
 // ── Datos para el coach ─────────────────────────────────────────────────────

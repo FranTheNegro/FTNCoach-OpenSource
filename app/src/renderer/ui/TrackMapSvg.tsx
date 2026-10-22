@@ -44,6 +44,66 @@ export function headingAt(x: number[], y: number[], i: number): number | null {
   return headingOf(x[k], y[k], x[j], y[j])
 }
 
+/** Punto y sentido de la línea de la vuelta en `pct` (0..1). */
+function along(line: [number, number][], pct: number): { x: number; y: number; h: number } {
+  const n = line.length
+  const i = Math.max(0, Math.min(n - 1, Math.round(pct * (n - 1))))
+  const a = line[Math.max(0, i - 2)]
+  const b = line[Math.min(n - 1, i + 2)]
+  return { x: line[i][0], y: line[i][1], h: Math.atan2(b[1] - a[1], b[0] - a[0]) }
+}
+
+/** Marcas fijas sobre la pista: el sentido de giro y dónde empieza cada sector. */
+function TrackMarks({ line, sectorsPct, font }: { line: [number, number][]; sectorsPct: number[] | null; font: number }) {
+  const dir = along(line, 0.025)
+  const deg = (h: number) => (h * 180) / Math.PI
+  return (
+    <g>
+      <path
+        d="M-0.5 -0.45 0.35 0 -0.5 0.45"
+        transform={`translate(${dir.x} ${dir.y}) rotate(${deg(dir.h)}) scale(${font * 1.1})`}
+        fill="none"
+        stroke="var(--ftn-blanco)"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+        aria-label="Sentido de giro"
+      />
+      {(sectorsPct ?? [])
+        .filter((p) => p > 0 && p < 1)
+        .map((p, k) => {
+          const m = along(line, p)
+          const nx = -Math.sin(m.h)
+          const ny = Math.cos(m.h)
+          const half = font * 0.9
+          return (
+            <g key={p}>
+              <path
+                d={`M${m.x - nx * half} ${m.y - ny * half}L${m.x + nx * half} ${m.y + ny * half}`}
+                stroke="var(--ftn-plata)"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+              <text
+                x={m.x + nx * half * 2}
+                y={m.y + ny * half * 2}
+                fontSize={font * 0.8}
+                fill="var(--ftn-plata)"
+                fontFamily="var(--ftn-font-data)"
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                S{k + 2}
+              </text>
+            </g>
+          )
+        })}
+    </g>
+  )
+}
+
 function Marker({ m, font }: { m: MapMarker; font: number }) {
   const s = (m.size ?? 1) * font * 0.7
   if (m.heading !== undefined && m.heading !== null) {
@@ -130,6 +190,7 @@ export function TrackMapSvg({
   className = '',
   showLabels = true,
   focus = null,
+  sectorsPct = null,
 }: {
   map: TrackGeometry | null
   lines?: MapLine[]
@@ -138,6 +199,8 @@ export function TrackMapSvg({
   showLabels?: boolean
   /** Acerca el mapa a esta zona (p. ej. la curva elegida). */
   focus?: { minX: number; minY: number; maxX: number; maxY: number } | null
+  /** Inicio de cada sector (0..1): se marcan sobre la pista. */
+  sectorsPct?: number[] | null
 }) {
   const full = boundsOf(map, lines)
   if (!full) return null
@@ -157,6 +220,19 @@ export function TrackMapSvg({
       {map && !map.asphalt.length && map.pctLine && (
         <path d={pathOf(map.pctLine.map((p) => p[0]), map.pctLine.map((p) => p[1]))} fill="none" stroke="var(--ftn-acero)" strokeWidth={6} vectorEffect="non-scaling-stroke" />
       )}
+      {map?.pitLane?.map((c, i) => (
+        <path
+          key={`pit${i}`}
+          d={pathOf(c.map((p) => p[0]), c.map((p) => p[1]))}
+          fill="none"
+          stroke="var(--ftn-niebla)"
+          strokeWidth={1.5}
+          strokeDasharray="4 4"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      ))}
+      {map?.pctLine && <TrackMarks line={map.pctLine} sectorsPct={sectorsPct} font={font} />}
       {map?.startFinish.map((c, i) =>
         c.length > 2 ? (
           <path key={i} d={polygons([c])} fill="var(--ftn-blanco)" />
