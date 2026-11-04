@@ -1,12 +1,50 @@
 import { useEffect, useRef, useState } from 'react'
-import { ClipboardList, MessageSquareText, Target } from 'lucide-react'
+import { ClipboardList, History, MessageSquareText, Repeat, Target } from 'lucide-react'
 import { Apex, BrakePedal, PhaseIcon, ThrottlePedal, Tyre } from '@ui/icons'
-import type { CoachState } from '@shared/analysis'
+import type { CoachFollowUp, CoachState, FollowUpItem, FollowUpVerdict } from '@shared/analysis'
 import { COACH_MODELS, COACH_PROVIDERS } from '@shared/analysis'
 import { Button, Card, Label } from '../components/ui'
 import { GoLink } from '../nav'
 
 const cleanError = (e: unknown) => String((e as Error)?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+
+const VERDICT: Record<FollowUpVerdict, { label: string; color: string }> = {
+  better: { label: 'Mejoró', color: 'text-record' },
+  same: { label: 'Igual', color: 'text-plata' },
+  worse: { label: 'Empeoró', color: 'text-alerta' },
+  unknown: { label: 'Sin medir', color: 'text-niebla' },
+}
+
+/** El número detrás del veredicto, siempre medido entre las dos sesiones. */
+function measuredText(i: FollowUpItem): string {
+  if (i.medianGainS === null) return i.corner ? 'Hacen falta 3 vueltas limpias en cada sesión para medirla.' : 'No se pudo ubicar la curva en la telemetría.'
+  const time = `Mediana ${Math.abs(i.medianGainS).toFixed(2)} s ${i.medianGainS >= 0 ? 'mejor' : 'peor'}`
+  if (!i.minKmhDiff) return time
+  return `${time} · mínima ${Math.abs(i.minKmhDiff)} km/h ${i.minKmhDiff > 0 ? 'más' : 'menos'}`
+}
+
+function FollowUpCard({ data, summary }: { data: CoachFollowUp; summary: string }) {
+  const date = new Date(data.startedAt).toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' })
+  return (
+    <Card>
+      <Label icon={History}>{`Lo que te pedí en la sesión del ${date}`}</Label>
+      {summary && <p className="mt-3 text-[15px] leading-relaxed">{summary}</p>}
+      <div className="mt-3 divide-y divide-grafito">
+        {data.items.map((i) => (
+          <div key={i.title} className="py-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 items-baseline">
+            <span className="text-[14px] leading-snug">
+              <span className="data text-[12px] tracking-[0.08em] text-plata uppercase">{i.title}</span>
+              <span className="block mt-1">{i.solution}</span>
+            </span>
+            <span className={`data font-bold text-[14px] ${VERDICT[i.verdict].color}`}>{VERDICT[i.verdict].label}</span>
+            <span className="col-span-2 data text-[13px] text-niebla">{measuredText(i)}</span>
+          </div>
+        ))}
+      </div>
+      {data.drill && <p className="mt-2 text-[13px] text-niebla leading-snug">Ejercicio que te dejé: {data.drill.description}</p>}
+    </Card>
+  )
+}
 
 export function CoachPanel({ sessionId, lap, lapLabel }: { sessionId: string; lap: number; lapLabel: string }) {
   const [st, setSt] = useState<CoachState | null>(null)
@@ -88,6 +126,13 @@ export function CoachPanel({ sessionId, lap, lapLabel }: { sessionId: string; la
               <Label icon={ClipboardList}>Briefing</Label>
               <p className="mt-3 text-[16px] leading-relaxed">{r.briefing}</p>
             </Card>
+            {st.followUp && <FollowUpCard data={st.followUp} summary={r.followUp ?? ''} />}
+            {r.recurring && (
+              <Card>
+                <Label icon={Repeat}>Se repite entre sesiones</Label>
+                <p className="mt-2 text-[15px] leading-relaxed">{r.recurring}</p>
+              </Card>
+            )}
             <div className="grid grid-cols-3 gap-4">
               {r.corrections.map((c) => (
                 <article key={c.rank} className="bg-carbono-2 border border-grafito rounded-card p-4 flex flex-col gap-2">

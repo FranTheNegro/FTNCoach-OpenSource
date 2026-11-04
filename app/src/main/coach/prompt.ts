@@ -27,7 +27,8 @@ Your single job: make this driver faster using ONLY the telemetry numbers you ar
 - best_execution is the fastest clean pass of each corner in the session; loss_vs_best_s is the analyzed lap against it.
 - driver_profile (optional) is what the driver told about themselves: adapt depth and priorities to it, and tie the drill to their stated goal when it fits.
 - driver_style (optional) are the driver's measured habits averaged over their recent sessions (braking, trail-braking, throttle, consistency, grip use): connect this session's issues to those habits when they match, and say when this session breaks the pattern.
-- driver_history (optional) is the driver's history in this same car and track from their earlier sessions on this PC: their PB before this session and their historical ideal lap (sum of their best sectors across sessions). Say if this session is a new PB and how far the best lap is from that ideal.`,
+- driver_history (optional) is the driver's history in this same car and track from their earlier sessions on this PC: their PB before this session and their historical ideal lap (sum of their best sectors across sessions). Say if this session is a new PB and how far the best lap is from that ideal.
+- coach_memory (optional) is what you asked this driver in earlier sessions. In same_car_track, median_gain_s is the corner's median time then minus now (positive = faster now) and the app computed verdict from those numbers: never contradict it, and never claim an improvement without it. 'unknown' means it could not be measured: say so. Conditions may differ between sessions, so report what was measured without claiming your advice caused it. If a correction got better, acknowledge it once and move on. If it stayed the same or got worse, do not repeat it word for word: give a different, specific instruction. other_tracks only lists earlier findings elsewhere: use it solely to spot habits that repeat.`,
 ].join('\n')
 
 export const REPORT_FORMAT = `## OUTPUT — JSON ONLY
@@ -43,8 +44,11 @@ Reply with a single JSON object, no markdown fences, no text before or after, wi
     { "rank": 1, "title": "T7 · FRENADA", "current": "what the data shows today", "target": "the achievable target from the data",
       "gainS": 0.18, "solution": "ONE direct instruction in voseo" }
   ],
-  "drill": { "description": "the single task for the next stint", "kpi": "measurable success criterion" }
-}`
+  "drill": { "description": "the single task for the next stint", "kpi": "measurable success criterion" },
+  "follow_up": "Only with coach_memory.same_car_track: 1-3 sentences on what you asked last time and what was measured. Otherwise an empty string.",
+  "recurring": "Only if coach_memory shows the same habit in at least 2 earlier sessions: 1-2 sentences naming it and where it showed up. Otherwise an empty string."
+}
+Each correction title starts with the exact corner label from the data, then " · " and the phase.`
 
 export function reportRequest(data: Record<string, unknown>): string {
   return `Analizá esta sesión y devolvé el reporte en el formato pedido.\n\nDATOS DE LA SESIÓN (JSON):\n${JSON.stringify(data)}`
@@ -65,7 +69,7 @@ export function parseReport(text: string): CoachReport {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
   if (start < 0 || end <= start) throw new Error('El coach no devolvió un reporte válido')
-  const raw = JSON.parse(text.slice(start, end + 1)) as Partial<CoachReport>
+  const raw = JSON.parse(text.slice(start, end + 1)) as Partial<CoachReport> & { follow_up?: unknown }
   const str = (v: unknown) => (typeof v === 'string' ? v : '')
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
   return {
@@ -91,5 +95,7 @@ export function parseReport(text: string): CoachReport {
       solution: str(c?.solution),
     })),
     drill: { description: str(raw.drill?.description), kpi: str(raw.drill?.kpi) },
+    followUp: str(raw.follow_up),
+    recurring: str(raw.recurring),
   }
 }

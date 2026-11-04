@@ -10,6 +10,12 @@ export function sameCombo(a: SessionSummary, b: SessionSummary): boolean {
   return a.carId && b.carId ? a.carId === b.carId : a.car === b.car
 }
 
+/** La misma curva en otra sesión: por número oficial o, si no, por dónde cae en la vuelta. */
+export function sameCorner(a: { label: string; apexPct: number }, b: { label: string; apexPct: number }): boolean {
+  if (/^T?\d+[a-z]?$/i.test(a.label) && a.label === b.label) return Math.abs(a.apexPct - b.apexPct) < 0.05
+  return Math.abs(a.apexPct - b.apexPct) < 0.015
+}
+
 const pctKey = (s: SessionSectors) => s.pct.map((p) => p.toFixed(3)).join(',')
 
 /**

@@ -596,6 +596,7 @@ export function coachData(p: Prepared, focus: number | null): Record<string, unk
               min_kmh: r1(median(clean.map((x) => x.minKmh)), 0),
             }
           : null,
+        clean_laps: clean.length,
         loss_vs_best_s: mine && best ? r1(mine.timeS - best.timeS, 3) : null,
       }
     }),

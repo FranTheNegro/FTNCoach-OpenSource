@@ -8,8 +8,9 @@ import { app, safeStorage } from 'electron'
 import { EventEmitter } from 'node:events'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { COACH_PROVIDERS, type ChatMessage, type CoachKeyId, type CoachProvider, type CoachReport, type CoachState } from '@shared/analysis'
+import { COACH_PROVIDERS, type ChatMessage, type CoachFollowUp, type CoachKeyId, type CoachProvider, type CoachReport, type CoachState } from '@shared/analysis'
 import { streamLlm, stripThinking } from './llm'
+import { buildMemory, type CoachMemory, type MemorySources } from './memory'
 import { PERSONA, REPORT_FORMAT, chatSystem, parseReport, reportRequest } from './prompt'
 
 interface Saved {
@@ -19,6 +20,9 @@ interface Saved {
   /** Vuelta analizada (índice) del reporte. */
   lap: number | null
   chat: ChatMessage[]
+  /** Lo que recordó de sesiones anteriores al armar el reporte (no está en reportes viejos). */
+  memory?: Record<string, unknown> | null
+  followUp?: CoachFollowUp | null
 }
 
 const MAX_CHAT_TURNS = 20
@@ -29,6 +33,8 @@ function atomicWrite(file: string, data: string | Buffer): void {
   renameSync(tmp, file)
 }
 
+const withMemory = (data: Record<string, unknown>, memory: Record<string, unknown> | null | undefined) => (memory ? { ...data, coach_memory: memory } : data)
+
 export class CoachService extends EventEmitter<{ state: [CoachState] }> {
   private dir = join(app.getPath('userData'), 'coach')
   private live = new Map<string, { busy: boolean; error: string | null; streaming: string | null }>()
@@ -36,6 +42,7 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
   constructor(
     private choice: () => { provider: CoachProvider; model: string },
     private sessionData: (id: string, lap: number | null) => Promise<Record<string, unknown>>,
+    private memorySources: Omit<MemorySources, 'report'>,
   ) {
     super()
   }
@@ -97,6 +104,7 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
       report: s.report,
       model: s.model,
       createdAt: s.createdAt,
+      followUp: s.followUp ?? null,
       chat: s.chat,
       busy: l?.busy ?? false,
       error: l?.error ?? null,
@@ -122,17 +130,29 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
     return this.state(id)
   }
 
+  /** Sin memoria el reporte sale igual: nunca lo frena un problema con sesiones viejas. */
+  private async recall(id: string, data: Record<string, unknown>): Promise<CoachMemory> {
+    try {
+      return await buildMemory(id, data, { ...this.memorySources, report: (s) => this.load(s).report })
+    } catch (err) {
+      console.warn('[coach] no se pudo armar la memoria', err)
+      return { memory: null, followUp: null }
+    }
+  }
+
   /** Reporte completo de la sesión (o de una vuelta puntual). */
   analyze(id: string, lap: number | null): Promise<CoachState> {
     return this.run(id, async () => {
       const llm = this.llm()
       const data = await this.sessionData(id, lap)
+      this.set(id, { streaming: 'Revisando tus sesiones anteriores…' })
+      const { memory, followUp } = await this.recall(id, data)
       let shown = 0
       const text = await streamLlm({
         ...llm,
         conversation: id,
         system: [PERSONA, REPORT_FORMAT],
-        messages: [{ role: 'user', content: reportRequest(data) }],
+        messages: [{ role: 'user', content: reportRequest(withMemory(data, memory)) }],
         maxTokens: 8000,
         json: true,
         onText: (t) => {
@@ -146,7 +166,7 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
       })
       const report = parseReport(text)
       const saved = this.load(id)
-      this.save(id, { ...saved, report, model: llm.label, createdAt: Date.now(), lap })
+      this.save(id, { ...saved, report, model: llm.label, createdAt: Date.now(), lap, memory, followUp })
     })
   }
 
@@ -168,7 +188,7 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
       const answer = await streamLlm({
         ...llm,
         conversation: id,
-        system: [PERSONA, chatSystem(data, saved.report)],
+        system: [PERSONA, chatSystem(withMemory(data, saved.memory), saved.report)],
         messages: history.map((m) => ({ role: m.role, content: m.text })),
         maxTokens: 1500,
         onText: (t) => {

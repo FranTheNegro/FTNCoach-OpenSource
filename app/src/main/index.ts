@@ -77,6 +77,10 @@ const coach = new CoachService(
         : {}),
     }
   },
+  {
+    sessions: () => analysis.state.sessions,
+    data: (id) => analysis.request({ type: 'coachData', sessionId: id, lap: null }),
+  },
 )
 /** Tramos de rally (ACR) aprendidos y la cartografía descargada. */
 const acrStagesDir = () => join(app.getPath('userData'), 'acr', 'stages')

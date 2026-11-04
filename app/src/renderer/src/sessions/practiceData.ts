@@ -4,6 +4,7 @@
  * Todo sale de datos medidos de las sesiones; nada se estima.
  */
 import type { Corner, LapInfo, SessionDetail, SessionSummary, SetupGroup } from '@shared/analysis'
+import { sameCorner } from '@shared/history'
 
 // ── Stints ────────────────────────────────────────────────────────────────
 
@@ -97,12 +98,6 @@ export function cornerStats(d: SessionDetail): CornerStat[] {
     const s = t.slice().sort((a, b) => a - b)
     return [{ corner, bestS: s[0], medianS: s[s.length >> 1], laps: t.length }]
   })
-}
-
-/** La misma curva en otra sesión: por número oficial o, si no, por dónde cae en la vuelta. */
-export function sameCorner(a: { label: string; apexPct: number }, b: { label: string; apexPct: number }): boolean {
-  if (/^T?\d+[a-z]?$/i.test(a.label) && a.label === b.label) return Math.abs(a.apexPct - b.apexPct) < 0.05
-  return Math.abs(a.apexPct - b.apexPct) < 0.015
 }
 
 // ── Plan de práctica ───────────────────────────────────────────────────────

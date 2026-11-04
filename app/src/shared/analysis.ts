@@ -255,6 +255,34 @@ export interface CoachReport {
   dynamics: { braking: string; throttle: string; frictionCircle: string }
   corrections: { rank: number; title: string; current: string; target: string; gainS: number; solution: string }[]
   drill: { description: string; kpi: string }
+  /** Qué pasó con lo que pidió en sesiones anteriores (vacío o ausente si no hay). */
+  followUp?: string
+  /** Hábito que se repite entre sesiones (vacío o ausente si no hay). */
+  recurring?: string
+}
+
+/** Qué pasó con una corrección anterior. Lo mide la app, no la IA. */
+export type FollowUpVerdict = 'better' | 'same' | 'worse' | 'unknown'
+
+export interface FollowUpItem {
+  title: string
+  solution: string
+  /** Curva de la corrección (null si no se pudo ubicar). */
+  corner: string | null
+  verdict: FollowUpVerdict
+  /** Cuánto bajó la mediana de la curva (positivo = mejoraste). */
+  medianGainS: number | null
+  /** Cuánto cambió la mínima mediana en km/h (positivo = pasás más rápido). */
+  minKmhDiff: number | null
+}
+
+/** Lo que el coach pidió en el último reporte de este auto y pista. */
+export interface CoachFollowUp {
+  sessionId: string
+  /** Inicio de esa sesión (ms epoch). */
+  startedAt: number
+  items: FollowUpItem[]
+  drill: { description: string; kpi: string } | null
 }
 
 export interface ChatMessage {
@@ -269,6 +297,7 @@ export interface CoachState {
   /** Modelo y fecha del reporte. */
   model: string | null
   createdAt: number | null
+  followUp: CoachFollowUp | null
   chat: ChatMessage[]
   busy: boolean
   error: string | null

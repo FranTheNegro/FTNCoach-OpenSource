@@ -76,8 +76,11 @@ Si un circuito no tiene mapa, se muestra solo tu trazada y se avisa.
 
 En la pestaña *Coach* de una sesión, la IA lee la telemetría y devuelve un
 briefing, las tres correcciones que más tiempo te dan, el análisis curva por curva
-y un ejercicio para el próximo stint; después le podés hacer preguntas. Siempre
-usa tu propia cuenta; se elige en *Ajustes → Coach*:
+y un ejercicio para el próximo stint; después le podés hacer preguntas. Si ya
+analizó ese auto y pista, muestra qué te pidió y si mejoraste: lo mide la app
+comparando la mediana de cada curva entre las dos sesiones. Con reportes de otras
+sesiones, también avisa los hábitos que se repiten. Siempre usa tu propia cuenta; se
+elige en *Ajustes → Coach*:
 
 | Proveedor | Cuánto gastás | Qué necesitás |
 |---|---|---|
