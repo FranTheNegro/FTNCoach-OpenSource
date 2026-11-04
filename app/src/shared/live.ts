@@ -10,14 +10,16 @@
  */
 
 import type { CarCategory } from './category'
+import type { StageLive } from './stage'
 
 export const PROTOCOL_VERSION = 3
 
-export type SimId = 'iracing' | 'ac' | 'replay'
+export type SimId = 'iracing' | 'ac' | 'acr' | 'replay'
 
 export const SIM_LABEL: Record<SimId, string> = {
   iracing: 'iRacing',
   ac: 'Assetto Corsa',
+  acr: 'Assetto Corsa Rally',
   replay: 'Demo',
 }
 
@@ -139,6 +141,8 @@ export interface LiveFrame {
   oilTempC?: number | null
   /** Autos cercanos (solo iRacing; AC no publica a los rivales). */
   rivals?: Rivals | null
+  /** Rally (ACR): el tramo en curso. */
+  stage?: StageLive | null
 }
 
 export interface SessionMeta {

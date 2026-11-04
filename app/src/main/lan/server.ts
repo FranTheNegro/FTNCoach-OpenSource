@@ -13,12 +13,16 @@ import { extname, join, normalize, sep } from 'node:path'
 import { WebSocketServer, type WebSocket } from 'ws'
 import { PROTOCOL_VERSION, type EngineStatus, type LapRecord, type LiveFrame, type ServerMessage, type SessionMeta } from '@shared/live'
 import type { TrackMapResult } from '@shared/analysis'
+import type { StageMapData } from '@shared/stage'
 import type { TelemetryEngine } from '../telemetry/engine'
 
 /** Datos de solo lectura que el servidor pide a la app (mapa del trazado, app de AC). */
 export interface LanApi {
   trackMap(trackId: string, slug: string | null): Promise<TrackMapResult>
   ingame(): Promise<unknown>
+  /** Rally (ACR): mapa del tramo y las teselas de la cartografía. */
+  stageMap(id: string): Promise<StageMapData>
+  stageTile(layer: string, e: number, n: number): Promise<{ body: Buffer; mime: string }>
 }
 
 const MIME: Record<string, string> = {
@@ -245,6 +249,26 @@ export class LanServer {
         .trackMap(id, url.searchParams.get('slug'))
         .then((r) => json(200, r))
         .catch((err) => json(500, { error: String(err?.message ?? err) }))
+      return
+    }
+    if (path === '/api/stage-map') {
+      const id = url.searchParams.get('id')
+      if (!id) return json(400, { error: 'Falta id' })
+      this.api
+        .stageMap(id)
+        .then((r) => json(200, r))
+        .catch((err) => json(500, { error: String(err?.message ?? err) }))
+      return
+    }
+    if (path === '/api/stage-tile') {
+      const q = url.searchParams
+      this.api
+        .stageTile(q.get('layer') ?? '', Number(q.get('e')), Number(q.get('n')))
+        .then(({ body, mime }) => {
+          res.writeHead(200, { 'content-type': mime, 'cache-control': 'public, max-age=31536000, immutable' })
+          res.end(req.method === 'HEAD' ? undefined : body)
+        })
+        .catch((err) => json(502, { error: String(err?.message ?? err) }))
       return
     }
     if (path === '/api/ingame') {

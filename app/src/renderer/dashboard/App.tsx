@@ -7,6 +7,7 @@ import { usePrefs, type PageId } from './prefs'
 import { FLAG_INFO, FlagFrame } from './widgets'
 import { Inputs } from './v2/Inputs'
 import { TrackMap } from './v2/MapPage'
+import { StageMap } from './v2/StageMap'
 import { Car } from './v2/Car'
 import { Laps } from './v2/Laps'
 import { Live } from './v2/Live'
@@ -182,9 +183,8 @@ export function App() {
         {f && prefs.page === 'inputs' && (
           <Inputs f={f} history={client.history} units={prefs.units} />
         )}
-        {f && prefs.page === 'map' && (
-          <TrackMap f={f} meta={meta} units={prefs.units} tracker={tracker} />
-        )}
+        {f && prefs.page === 'map' &&
+          (meta?.sim === 'acr' ? <StageMap f={f} meta={meta} units={prefs.units} /> : <TrackMap f={f} meta={meta} units={prefs.units} tracker={tracker} />)}
         {overlay}
       </div>
 

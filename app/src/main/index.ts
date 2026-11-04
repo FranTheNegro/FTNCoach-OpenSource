@@ -14,6 +14,7 @@ import { CoachService } from './coach/service'
 import { claudeCodeVersion } from './coach/claude-code'
 import { acAppStatus, installAcApp } from './ac-app'
 import { LanServer } from './lan/server'
+import { StageMaps } from './acr/stage-map'
 import { SettingsStore } from './settings'
 import { StyleStore } from './style'
 import { VIDEO_EXTS, VideoStore, registerVideoScheme } from './video'
@@ -77,9 +78,16 @@ const coach = new CoachService(
     }
   },
 )
+/** Tramos de rally (ACR) aprendidos y la cartografía descargada. */
+const acrStagesDir = () => join(app.getPath('userData'), 'acr', 'stages')
+let stageMaps: StageMaps | null = null
+const stageMapsOf = () => (stageMaps ??= new StageMaps(acrStagesDir(), join(app.getPath('userData'), 'acr', 'tiles')))
+
 const lan = new LanServer(engine, {
   trackMap: (trackId, slug) => analysis.request({ type: 'liveMap', trackId, slug }),
   ingame: () => ingameState(),
+  stageMap: (id) => stageMapsOf().get(id),
+  stageTile: (layer, e, n) => stageMapsOf().tile(layer, e, n),
 })
 let finishingRecording = false
 
@@ -370,7 +378,7 @@ app.whenReady().then(async () => {
   settings = new SettingsStore()
   videos.serve()
   registerIpc()
-  engine.start(() => createReader({}))
+  engine.start(() => createReader({ workerData: { stagesDir: acrStagesDir() } }))
   analysis.start(() =>
     createAnalysis({
       workerData: { cacheFile: join(app.getPath('userData'), 'library.json'), geoDir: join(app.getPath('userData'), 'track_geo') },

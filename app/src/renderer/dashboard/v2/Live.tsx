@@ -493,9 +493,26 @@ function RacePanel({ c }: { c: Ctx }) {
 /** Rally: tiempo del tramo, cuánto falta y los parciales. */
 function StagePanel({ c }: { c: Ctx }) {
   const { f, meta, tracker, delta, deltaColor } = c
-  const sectors = tracker.sectors(f)
+  const st = f.stage ?? null
+  // ACR: parciales del tramo guardado (tiempo acumulado a cada parcial, contra tu mejor pasada)
+  const sectors: SectorState[] = st
+    ? st.splits.map((s, k) => {
+        const from = k ? st.splits[k - 1].distM : 0
+        const reached = s.timeS !== null
+        const live = !reached && st.state === 'running' && (k === 0 || st.splits[k - 1].timeS !== null)
+        return {
+          name: `P${k + 1}`,
+          timeS: reached ? s.timeS : live ? f.lapTimeS : null,
+          state: reached ? 'done' : live ? 'live' : 'idle',
+          grade: !reached ? null : s.best ? 'best' : s.diffS !== null && s.diffS <= 0.12 ? 'close' : 'slow',
+          diffS: s.diffS,
+          progress: reached ? 1 : live ? clamp((st.distM - from) / Math.max(1, s.distM - from), 0, 1) : 0,
+        }
+      })
+    : tracker.sectors(f)
   const pct = clamp(f.lapPct, 0, 1)
-  const leftM = meta?.trackLengthM ? (1 - pct) * meta.trackLengthM : null
+  const lengthM = st?.lengthM ?? meta?.trackLengthM ?? null
+  const leftM = lengthM ? (st ? Math.max(0, lengthM - st.distM) : (1 - pct) * lengthM) : null
   return (
     <section className="d2-panel fill" style={{ gap: 14 }}>
       <Lbl>Tramo</Lbl>
@@ -513,6 +530,11 @@ function StagePanel({ c }: { c: Ctx }) {
           <span>{leftM !== null ? `Faltan ${leftM >= 1000 ? `${(leftM / 1000).toFixed(1).replace('.', ',')} km` : `${Math.round(leftM)} m`}` : ''}</span>
         </div>
       </div>
+      {st && (st.resets > 0 || st.impacts.length > 0) && (
+        <div className="d2-mono" style={{ fontSize: 13, color: C.alerta }}>
+          {st.resets} {st.resets === 1 ? 'despiste' : 'despistes'} · {st.impacts.length} {st.impacts.length === 1 ? 'golpe' : 'golpes'}
+        </div>
+      )}
       {sectors.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${sectors.length}, minmax(0, 1fr))`, gap: 10 }}>
           {sectors.map((s) => (

@@ -7,7 +7,7 @@
  * versiones de AC1; los campos agregados al final por versiones nuevas no se usan.
  */
 
-type FieldType = 'i32' | 'f32' | `f32[${number}]` | `i32[${number}]` | `wchar[${number}]`
+export type FieldType = 'i32' | 'f32' | `f32[${number}]` | `i32[${number}]` | `wchar[${number}]`
 
 export interface Field {
   offset: number
@@ -24,7 +24,7 @@ function sizeOf(t: FieldType): { size: number; align: number; count: number } {
   return { size: 4 * count, align: 4, count }
 }
 
-function layout<K extends string>(fields: [K, FieldType][]): Layout<K> {
+export function layout<K extends string>(fields: [K, FieldType][]): Layout<K> {
   const out = {} as Record<K, Field>
   let off = 0
   for (const [name, type] of fields) {

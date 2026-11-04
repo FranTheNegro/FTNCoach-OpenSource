@@ -1,7 +1,7 @@
 {
   "name": "ftncoach",
   "productName": "FTN Coach",
-  "version": "0.3.0",
+  "version": "0.3.6",
   "description": "Telemetría en vivo y coach de sim racing para iRacing y Assetto Corsa",
   "license": "MIT",
   "private": true,

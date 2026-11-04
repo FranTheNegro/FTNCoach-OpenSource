@@ -6,11 +6,12 @@
  * los timers y no baja de ~36 Hz aunque se pida resolución de 1 ms. El loop de
  * libuv del worker sí la respeta.
  */
-import { parentPort } from 'node:worker_threads'
+import { parentPort, workerData } from 'node:worker_threads'
 import type { SessionMeta } from '@shared/live'
 import type { TelemetrySource } from './types'
 import { IracingLive } from './iracing/live'
 import { AcLive } from './ac/live'
+import { AcrLive } from './acr/live'
 import { IbtReplay } from './replay'
 import { setHighResTimer } from './win32'
 import type { ReaderCommand, ReaderEvent } from './reader-protocol'
@@ -19,6 +20,8 @@ const POLL_MS = 1000 / 60
 const PROBE_MS = 1000
 
 const port = parentPort!
+/** Carpeta de los tramos de rally aprendidos (la pasa el proceso principal). */
+const stagesDir: string | null = (workerData as { stagesDir?: string } | null)?.stagesDir ?? null
 const send = (e: ReaderEvent) => port.postMessage(e)
 
 let source: TelemetrySource | null = null
@@ -28,7 +31,7 @@ let metaKey = ''
 
 function openLive(): TelemetrySource | null {
   try {
-    return IracingLive.open() ?? AcLive.open()
+    return IracingLive.open() ?? AcLive.open() ?? AcrLive.open(stagesDir)
   } catch (err) {
     send({ type: 'error', message: `No se pudo abrir el simulador: ${String(err)}` })
     return null
