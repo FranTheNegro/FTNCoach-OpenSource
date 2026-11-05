@@ -2,9 +2,18 @@
  * Mapa del trazado: el asfalto real (dato fijo, nunca generado con las vueltas)
  * y encima las trazadas del piloto. Coordenadas en metros, y hacia abajo.
  */
+import { useMemo } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import type { TrackGeometry } from '@shared/analysis'
 import { CAR_ARROW_PATH, DIAMOND_PATH } from './icons'
+import { pitLines } from './pit-line'
+
+export interface MapBox {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+}
 
 export interface MapLine {
   x: number[]
@@ -27,6 +36,10 @@ export interface MapMarker {
   heading?: number | null
   /** Qué marca el punto (frenada, apex…): se dibuja el ícono en una placa. Sin ícono ni sentido, un rombo. */
   icon?: LucideIcon
+  /** Nombre del ícono en la leyenda del mapa ("Frenada"). */
+  legend?: string
+  /** Lo que muestra al pasar el mouse. */
+  title?: string
 }
 
 /** Sentido de marcha entre dos puntos del mapa, o null si están casi encima. */
@@ -164,7 +177,8 @@ function polygons(contours: [number, number][][]): string {
   return contours.map((c) => `M${c.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')}Z`).join('')
 }
 
-function boundsOf(map: TrackGeometry | null, lines: MapLine[]) {
+/** Todo lo que hay para mostrar: el mapa o, si no hay mapa, las trazadas. */
+export function mapBounds(map: TrackGeometry | null, lines: MapLine[]): MapBox | null {
   if (map && Number.isFinite(map.bounds.minX)) return map.bounds
   let minX = Infinity
   let minY = Infinity
@@ -183,6 +197,12 @@ function boundsOf(map: TrackGeometry | null, lines: MapLine[]) {
   return Number.isFinite(minX) ? { minX, minY, maxX, maxY } : null
 }
 
+/** La caja con un margen alrededor. */
+export function fittedBox(b: MapBox): MapBox {
+  const pad = Math.max(b.maxX - b.minX, b.maxY - b.minY, 1) * 0.06
+  return { minX: b.minX - pad, minY: b.minY - pad, maxX: b.maxX + pad, maxY: b.maxY + pad }
+}
+
 export function TrackMapSvg({
   map,
   lines = [],
@@ -190,6 +210,7 @@ export function TrackMapSvg({
   className = '',
   showLabels = true,
   focus = null,
+  view = null,
   sectorsPct = null,
 }: {
   map: TrackGeometry | null
@@ -198,49 +219,44 @@ export function TrackMapSvg({
   className?: string
   showLabels?: boolean
   /** Acerca el mapa a esta zona (p. ej. la curva elegida). */
-  focus?: { minX: number; minY: number; maxX: number; maxY: number } | null
+  focus?: MapBox | null
+  /** Vista exacta, sin margen (mapa que se mueve y se acerca a mano). Manda sobre `focus`. */
+  view?: MapBox | null
   /** Inicio de cada sector (0..1): se marcan sobre la pista. */
   sectorsPct?: number[] | null
 }) {
-  const full = boundsOf(map, lines)
-  if (!full) return null
-  const b = focus ?? full
-  const span = Math.max(b.maxX - b.minX, b.maxY - b.minY, 1)
-  const pad = span * 0.06
-  const vb = `${b.minX - pad} ${b.minY - pad} ${b.maxX - b.minX + 2 * pad} ${b.maxY - b.minY + 2 * pad}`
-  // Relativo a lo visible: al acercar, textos y marcadores conservan su tamaño en pantalla
-  const font = span / 38
+  const full = useMemo(() => mapBounds(map, lines), [map, lines])
   const step = Math.max(1, Math.floor((lines[0]?.x.length ?? 0) / 2500))
-
-  return (
-    <svg viewBox={vb} className={className} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mapa del trazado">
-      {map && map.asphalt.length > 0 && (
-        <path d={polygons(map.asphalt)} fill="var(--ftn-grafito)" fillRule="nonzero" stroke="var(--ftn-acero)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-      )}
-      {map && !map.asphalt.length && map.pctLine && (
-        <path d={pathOf(map.pctLine.map((p) => p[0]), map.pctLine.map((p) => p[1]))} fill="none" stroke="var(--ftn-acero)" strokeWidth={6} vectorEffect="non-scaling-stroke" />
-      )}
-      {map?.pitLane?.map((c, i) => (
-        <path
-          key={`pit${i}`}
-          d={pathOf(c.map((p) => p[0]), c.map((p) => p[1]))}
-          fill="none"
-          stroke="var(--ftn-niebla)"
-          strokeWidth={1.5}
-          strokeDasharray="4 4"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      ))}
-      {map?.pctLine && <TrackMarks line={map.pctLine} sectorsPct={sectorsPct} font={font} />}
-      {map?.startFinish.map((c, i) =>
-        c.length > 2 ? (
-          <path key={i} d={polygons([c])} fill="var(--ftn-blanco)" />
-        ) : (
-          <path key={i} d={pathOf(c.map((p) => p[0]), c.map((p) => p[1]))} stroke="var(--ftn-blanco)" strokeWidth={3} vectorEffect="non-scaling-stroke" />
-        ),
-      )}
-      {lines.map((l, k) => (
+  // Las capas pesadas no se recalculan al mover el mapa: solo cambia el viewBox
+  const track = useMemo(
+    () => (
+      <>
+        {map && map.asphalt.length > 0 && (
+          <path d={polygons(map.asphalt)} fill="var(--ftn-grafito)" fillRule="nonzero" stroke="var(--ftn-acero)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+        )}
+        {map && !map.asphalt.length && map.pctLine && (
+          <path d={pathOf(map.pctLine.map((p) => p[0]), map.pctLine.map((p) => p[1]))} fill="none" stroke="var(--ftn-acero)" strokeWidth={6} vectorEffect="non-scaling-stroke" />
+        )}
+        {pitLines(map?.pitLane).map((c, i) => (
+          <path
+            key={`pit${i}`}
+            d={pathOf(c.map((p) => p[0]), c.map((p) => p[1]))}
+            fill="none"
+            stroke="var(--ftn-plata)"
+            strokeWidth={3}
+            strokeDasharray="6 4"
+            strokeLinecap="butt"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+      </>
+    ),
+    [map],
+  )
+  const drawn = useMemo(
+    () =>
+      lines.map((l, k) => (
         <g key={k}>
           {l.colors ? (
             colorRuns(l, step).map((r, i) => (
@@ -254,7 +270,28 @@ export function TrackMapSvg({
               <path key={i} d={pathOf(l.x, l.y, a, z + 1)} fill="none" stroke="var(--ftn-alerta)" strokeWidth={(l.width ?? 2) + 1.5} vectorEffect="non-scaling-stroke" />
             ))}
         </g>
-      ))}
+      )),
+    [lines, step],
+  )
+  if (!full) return null
+  const b = view ?? fittedBox(focus ?? full)
+  const span = Math.max(b.maxX - b.minX, b.maxY - b.minY, 1) / 1.12
+  const vb = `${b.minX} ${b.minY} ${b.maxX - b.minX} ${b.maxY - b.minY}`
+  // Relativo a lo visible: al acercar, textos y marcadores conservan su tamaño en pantalla
+  const font = span / 38
+
+  return (
+    <svg viewBox={vb} className={className} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mapa del trazado">
+      {track}
+      {map?.pctLine && <TrackMarks line={map.pctLine} sectorsPct={sectorsPct} font={font} />}
+      {map?.startFinish.map((c, i) =>
+        c.length > 2 ? (
+          <path key={i} d={polygons([c])} fill="var(--ftn-blanco)" />
+        ) : (
+          <path key={i} d={pathOf(c.map((p) => p[0]), c.map((p) => p[1]))} stroke="var(--ftn-blanco)" strokeWidth={3} vectorEffect="non-scaling-stroke" />
+        ),
+      )}
+      {drawn}
       {showLabels &&
         map?.labels.map((l, i) => (
           <text
@@ -274,6 +311,7 @@ export function TrackMapSvg({
         const s = (m.size ?? 1) * font * 0.7
         return (
           <g key={i}>
+            {m.title && <title>{m.title}</title>}
             <Marker m={m} font={font} />
             {m.label && (
               <text x={m.x + s * (m.icon ? 1.6 : 1)} y={m.y} fontSize={font} fill="var(--ftn-blanco)" fontFamily="var(--ftn-font-data)" dominantBaseline="middle">

@@ -46,6 +46,20 @@ export function useLibrary(): LibraryState | null {
 }
 
 /** Ancho real de un elemento (para gráficos que dibujan en píxeles). */
+/** Alto disponible de un elemento (el contenido, sin padding). */
+export function useHeight<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
+  const ref = useRef<T>(null)
+  const [h, setH] = useState(0)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setH(Math.floor(e.contentRect.height)))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return [ref, h]
+}
+
 export function useWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
   const ref = useRef<T>(null)
   const [w, setW] = useState(0)

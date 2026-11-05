@@ -146,6 +146,17 @@ export function phaseIcon(title: string): LucideIcon {
   return Apex
 }
 
+/** Nombre de la fase para la leyenda del mapa, con el mismo criterio que `phaseIcon`. */
+export function phaseName(title: string): string {
+  const t = title.toUpperCase()
+  if (/SALIDA DE PISTA|OFF.?TRACK/.test(t)) return 'Fuera de pista'
+  if (/FRENAD|BRAK/.test(t)) return 'Frenada'
+  if (/V[ÉE]RTICE|APEX/.test(t)) return 'Apex'
+  if (/SALIDA|EXIT|TRACCI/.test(t)) return 'Salida'
+  if (/ENTRADA|ENTRY|TURN/.test(t)) return 'Entrada'
+  return 'Curva'
+}
+
 export function PhaseIcon({ title, size = 15, color }: { title: string; size?: number; color?: string }) {
   const Icon = phaseIcon(title)
   return <Icon size={size} color={color} className="shrink-0" aria-hidden="true" />

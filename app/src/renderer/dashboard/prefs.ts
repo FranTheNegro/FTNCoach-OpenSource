@@ -14,10 +14,12 @@ export interface Prefs {
   /** Layout elegido a mano (cuando no es automático). */
   layout: LayoutId
   skin: SkinId
+  /** Qué panel muestra cada zona alternable de "En vivo". */
+  panels: Record<string, number>
 }
 
 const KEY = 'ftn.dashboard.prefs'
-const DEFAULTS: Prefs = { units: 'metric', page: 'live', layoutAuto: true, layout: 'gt', skin: 'ftn' }
+const DEFAULTS: Prefs = { units: 'metric', page: 'live', layoutAuto: true, layout: 'gt', skin: 'ftn', panels: {} }
 
 function pick<T extends string>(list: readonly T[], v: unknown, fallback: T): T {
   return list.includes(v as T) ? (v as T) : fallback
@@ -34,6 +36,7 @@ function load(): Prefs {
       layout: pick(LAYOUT_IDS, stored.layout, DEFAULTS.layout),
       skin: pick(SKIN_IDS, stored.skin, DEFAULTS.skin),
       layoutAuto: typeof stored.layoutAuto === 'boolean' ? stored.layoutAuto : DEFAULTS.layoutAuto,
+      panels: stored.panels && typeof stored.panels === 'object' ? stored.panels : DEFAULTS.panels,
     }
   } catch {
     return DEFAULTS

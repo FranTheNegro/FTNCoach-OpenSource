@@ -39,7 +39,9 @@ export function flagsOf(bits: number | null): Flag[] {
   if (bits & (F.black | F.disqualify)) out.push('black')
   if (bits & F.repair) out.push('meatball')
   if (bits & (F.yellow | F.yellowWaving | F.caution | F.cautionWaving)) out.push('yellow')
-  if (bits & F.blue) out.push('blue')
+  // En la largada iRacing manda azul junto con la verde durante unos segundos, sin que nadie
+  // te esté doblando. Mientras dura la verde (unos 40 s después de largar) no cuenta.
+  if (bits & F.blue && !(bits & F.green)) out.push('blue')
   if (bits & F.white) out.push('white')
   if (bits & F.green) out.push('green')
   return out

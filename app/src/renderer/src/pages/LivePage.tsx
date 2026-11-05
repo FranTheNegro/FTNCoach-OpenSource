@@ -1,5 +1,5 @@
 import { Eye, FlaskConical, Gauge, Link, Plug, Tablet, Unplug } from 'lucide-react'
-import { SIM_LABEL } from '@shared/live'
+import { SIM_LABEL, sessionLabel } from '@shared/live'
 import { Button, Card, Label, PageHeader, Toggle } from '../components/ui'
 import { useLanState, useLiveState } from '../hooks'
 import { GoLink } from '../nav'
@@ -25,7 +25,7 @@ function SimStatus() {
         </div>
         <div className="text-plata mt-1 truncate">
           {connected
-            ? [live?.meta?.car, live?.meta?.track, live?.meta?.sessionType].filter(Boolean).join(' · ') || 'Leyendo datos…'
+            ? [live?.meta?.car, live?.meta?.track, live?.meta ? sessionLabel(live.meta.sessionType) : null].filter(Boolean).join(' · ') || 'Leyendo datos…'
             : 'Abrí iRacing o Assetto Corsa y subite al auto. FTN Coach lo detecta solo, no hay que configurar nada.'}
         </div>
       </div>

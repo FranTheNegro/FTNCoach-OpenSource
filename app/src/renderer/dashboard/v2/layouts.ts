@@ -36,7 +36,8 @@ export type SkinId = (typeof SKIN_IDS)[number]
  */
 export const SKINS: Record<SkinId, { name: string; vars: Record<string, string> }> = {
   ftn: { name: 'FTN', vars: {} },
-  oled: { name: 'Negro OLED', vars: { '--ftn-carbono': '#000000', '--ftn-carbono-2': '#0b0c0f', '--ftn-grafito': '#1b1e24', '--ftn-acero': '#2a2e36' } },
+  // AMOLED: negro puro de verdad. Lo que apaga fondos y adornos está en live.css ([data-skin='oled'])
+  oled: { name: 'AMOLED', vars: { '--ftn-carbono': '#000000', '--ftn-carbono-2': '#000000', '--ftn-grafito': '#1a1c20', '--ftn-acero': '#2a2e36' } },
   ultramar: {
     name: 'Ultramar',
     vars: { '--ftn-carbono': '#0a0e2a', '--ftn-carbono-2': '#121845', '--ftn-grafito': '#222a66', '--ftn-acero': '#323b80', '--ftn-azul': '#7d95ff' },
@@ -52,4 +53,5 @@ export function applySkin(id: SkinId): void {
   const root = document.documentElement
   for (const skin of Object.values(SKINS)) for (const k of Object.keys(skin.vars)) root.style.removeProperty(k)
   for (const [k, v] of Object.entries(SKINS[id].vars)) root.style.setProperty(k, v)
+  root.dataset.skin = id
 }

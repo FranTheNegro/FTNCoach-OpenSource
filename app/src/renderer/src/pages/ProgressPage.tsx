@@ -5,7 +5,7 @@
 import { Database } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { LineSwatch } from '@ui/icons'
-import type { SessionSummary } from '@shared/analysis'
+import { isLocal, type SessionSummary } from '@shared/analysis'
 import { historicalIdeal } from '@shared/history'
 import * as fmt from '@ui/format'
 import { BestLapChart } from '../components/charts'
@@ -25,6 +25,18 @@ interface Combo {
   idealS: number | null
 }
 
+/** Una combinación mientras se juntan sus días. */
+interface Group {
+  key: string
+  track: string
+  car: string
+  sim: 'iracing' | 'ac'
+  days: Map<string, number>
+  list: SessionSummary[]
+  timeS: number
+  idealS: number | null
+}
+
 const norm = (s: string) => s.toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim()
 
 function localDay(ms: number): string {
@@ -39,6 +51,13 @@ export function hours(s: number | null | undefined): string {
 
 const shortDay = (day: string) => new Date(day + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 
+/**
+ * La misma combinación se reconoce por los ids: las fuentes nombran distinto
+ * al mismo auto y pista ("Global Mazda MX-5 Cup" y "Mazda MX-5 Cup").
+ */
+const comboId = (sim: string, trackId: string | null | undefined, track: string, carId: string | null | undefined, car: string) =>
+  `${sim}:${trackId ?? norm(track)}:${carId ?? norm(car)}`
+
 function sessionsLabel(c: Combo): string {
   return `${c.sessions} ${c.sessions === 1 ? 'sesión' : 'sesiones'}`
 }
@@ -52,30 +71,47 @@ export function useProgress(): Progress {
   const lib = useLibrary()
   const sessions = useMemo(() => lib?.sessions ?? [], [lib])
   const combos = useMemo(() => {
-    const out: Combo[] = []
-    const local = new Map<string, SessionSummary[]>()
+    const groups = new Map<string, Group>()
     for (const s of sessions) {
       if (!s.bestLapS) continue
-      const key = `local:${s.sim}:${s.trackId ?? s.track}:${s.car}`
-      local.set(key, [...(local.get(key) ?? []), s])
-    }
-    for (const [key, list] of local) {
-      const byDay = new Map<string, number>()
-      for (const s of list) {
-        const day = localDay(s.startedAt)
-        byDay.set(day, Math.min(byDay.get(day) ?? Infinity, s.bestLapS!))
+      const key = comboId(s.sim, s.trackId, s.track, s.carId, s.car)
+      let g = groups.get(key)
+      if (!g) {
+        g = {
+          key,
+          track: s.track,
+          car: s.car,
+          sim: s.sim,
+          days: new Map(),
+          list: [],
+          timeS: 0,
+          idealS: null,
+        }
+        groups.set(key, g)
       }
-      out.push({
-        key,
-        track: list[0].track,
-        car: list[0].car,
-        sim: list[0].sim,
-        points: [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, bestS]) => ({ day, bestS })),
-        sessions: list.length,
-        timeS: list.reduce((a, s) => a + s.durationS, 0),
-        idealS: historicalIdeal(list),
-      })
+      const day = localDay(s.startedAt)
+      g.days.set(day, Math.min(g.days.get(day) ?? Infinity, s.bestLapS))
+      g.list.push(s)
+      // El nombre que da el simulador manda sobre el de otras fuentes
+      if (isLocal(s)) {
+        g.track = s.track
+        g.car = s.car
+      }
+      g.timeS += s.durationS
     }
+    const out = [...groups.values()].map((g): Combo => {
+      const ideals = [historicalIdeal(g.list), g.idealS].filter((v): v is number => v !== null)
+      return {
+        key: g.key,
+        track: g.track,
+        car: g.car,
+        sim: g.sim,
+        points: [...g.days.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, bestS]) => ({ day, bestS })),
+        sessions: g.list.length,
+        timeS: g.timeS || null,
+        idealS: ideals.length ? Math.min(...ideals) : null,
+      }
+    })
     return out.sort((a, b) => (b.points.at(-1)?.day ?? '').localeCompare(a.points.at(-1)?.day ?? ''))
   }, [sessions])
   return { combos, sessions }

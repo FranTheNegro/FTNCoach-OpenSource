@@ -662,12 +662,14 @@ body,
 
 /* ── Banderas y avisos ────────────────────────────────────────────────── */
 
+/* El radio exterior es mayor que el grosor: así el borde también queda redondeado por dentro */
 .flag-frame {
   position: absolute;
   inset: 0;
+  box-sizing: border-box;
   pointer-events: none;
-  border: 10px solid var(--flag);
-  border-radius: 6px;
+  border: 12px solid var(--flag);
+  border-radius: 28px;
   z-index: 5;
 }
 
@@ -681,25 +683,13 @@ body,
   }
 }
 
+/* Dos filas de cuadros reales: la máscara deja ver el damero solo en el anillo del borde */
 .flag-frame.checkered {
-  border-image: repeating-conic-gradient(var(--ftn-blanco) 0 25%, var(--ftn-carbono) 0 50%) 10 / 10px / 0 round;
-  border-image-width: 10px;
-}
-
-.flag-label {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--flag);
-  color: var(--ftn-carbono);
-  font-family: var(--ftn-font-data);
-  font-weight: 700;
-  font-size: clamp(11px, 2vh, 16px);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  padding: 0.35em 1em;
-  border-radius: 0 0 6px 6px;
+  border-color: transparent;
+  background: repeating-conic-gradient(#fff 0 25%, #000 0 50%) 0 0 / 12px 12px border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
 }
 
 .overlay {
@@ -768,6 +758,23 @@ body,
   display: flex;
   justify-content: space-between;
   gap: 16px;
+}
+
+.menu-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: var(--ftn-plata);
+}
+.menu-info > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ftn-font-data);
+  font-size: 13px;
 }
 
 .menu button:active {

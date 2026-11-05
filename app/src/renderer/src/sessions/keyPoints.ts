@@ -37,17 +37,22 @@ export function keyPoints(d: SessionDetail, cmp: CompareResult, cornerIds: numbe
     const a = cmp.passesA[k]
     const b = cmp.passesB[k]
     if (k < 0 || !a) continue
-    push(a.brakeM, { color: 'var(--ftn-error)', icon: BrakePedal, size: 0.8, label: metres(a.brakeM, b?.brakeM) })
-    push(a.turnInM, { color: 'var(--ftn-azul)', icon: TurnIn, size: 0.8, label: metres(a.turnInM, b?.turnInM) })
+    const corner = d.corners[k].label
+    // Cada punto dice qué es y, si difiere, cuánto contra la referencia
+    const point = (m: number | null | undefined, legend: string, what: string, color: string, icon: MapMarker['icon'], label: string | undefined) =>
+      push(m, { color, icon, size: 0.8, label, legend, title: `${corner} · ${what}${label ? `: ${label} que la referencia` : ''}` })
+    point(a.brakeM, 'Frenada', 'dónde empezás a frenar', 'var(--ftn-error)', BrakePedal, metres(a.brakeM, b?.brakeM))
+    point(a.turnInM, 'Turn-in', 'dónde empezás a doblar', 'var(--ftn-azul)', TurnIn, metres(a.turnInM, b?.turnInM))
     const kmh = b ? Math.round(a.minKmh - b.minKmh) : 0
-    push(a.minM, { color: 'var(--ftn-plata)', icon: Apex, size: 0.8, label: Math.abs(kmh) >= 2 ? `${kmh > 0 ? '+' : '−'}${Math.abs(kmh)} km/h` : undefined })
-    push(a.fullThrottleM, { color: 'var(--ftn-record)', icon: ThrottlePedal, size: 0.8, label: metres(a.fullThrottleM, b?.fullThrottleM) })
+    const apex = Math.abs(kmh) >= 2 ? `${kmh > 0 ? '+' : '−'}${Math.abs(kmh)} km/h` : undefined
+    push(a.minM, { color: 'var(--ftn-plata)', icon: Apex, size: 0.8, label: apex, legend: 'Apex', title: `${corner} · apex, tu velocidad mínima${apex ? `: ${apex} contra la referencia` : ''}` })
+    point(a.fullThrottleM, 'A fondo', 'dónde volvés a fondo', 'var(--ftn-record)', ThrottlePedal, metres(a.fullThrottleM, b?.fullThrottleM))
     if (a.offTrack) {
       const c = d.corners[k]
       const from = Math.round(c.startPct * (x.length - 1))
       const to = Math.round(c.endPct * (x.length - 1))
       const i = cmp.a.off.findIndex((v, j) => j >= from && j <= to && v > 0)
-      if (i >= 0) push(i * step, { color: 'var(--ftn-alerta)', icon: OffTrack, size: 0.8, label: 'fuera de pista' })
+      if (i >= 0) push(i * step, { color: 'var(--ftn-alerta)', icon: OffTrack, size: 0.8, label: 'fuera de pista', legend: 'Fuera de pista', title: `${corner} · saliste de pista` })
     }
   }
   return out

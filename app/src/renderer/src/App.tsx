@@ -44,7 +44,7 @@ export function App() {
   }
   return (
     <NavContext.Provider value={nav}>
-    <div className="h-full grid grid-rows-[40px_1fr] grid-cols-[220px_1fr]">
+    <div className="h-full grid grid-rows-[40px_minmax(0,1fr)] grid-cols-[220px_minmax(0,1fr)]">
       <div className="drag col-span-2 flex items-center px-4 border-b border-grafito">
         <LogoHorizontal height={26} />
       </div>
@@ -64,7 +64,7 @@ export function App() {
         ))}
         <div className="mt-auto px-3 pb-1 data text-[11px] text-niebla">v{window.ftn.version}</div>
       </nav>
-      <main className="overflow-y-auto p-8 min-w-0">
+      <main className={route === 'sessions' && openSession ? 'overflow-hidden px-4 pt-1 pb-3 min-w-0 min-h-0' : 'overflow-y-auto p-8 min-w-0'}>
         {route === 'live' && <LivePage />}
         {route === 'sessions' && <SessionsPage open={openSession} onOpen={setOpenSession} query={query} onQuery={setQuery} />}
         {route === 'progress' && <ProgressPage />}

@@ -4,7 +4,8 @@ import type { LiveFrame, SessionMeta } from '@shared/live'
 import type { Units } from '@shared/api'
 import * as fmt from '@ui/format'
 import { C, Chip, DASH, Ico, Lbl, clamp } from './kit'
-import { TYRE_NAMES, tyreBand } from './Live'
+import { fuelPlan } from './fuel'
+import { TYRE_NAMES, brakeColor, tyreBand } from './Live'
 
 const POS: { col: number; row: number }[] = [
   { col: 1, row: 1 },
@@ -14,13 +15,6 @@ const POS: { col: number; row: number }[] = [
 ]
 
 const ZONE_NAMES = ['INT', 'CEN', 'EXT'] as const
-
-function brakeColor(c: number): string {
-  if (c < 250) return C.azul
-  if (c <= 650) return C.blanco
-  if (c <= 800) return C.alerta
-  return C.error
-}
 
 /** Reparto de freno: escala 35–65 %, el centro (50 %) es la línea blanca. Arriba = frente. */
 function BrakeBias({ bias }: { bias: number | null }) {
@@ -97,13 +91,14 @@ export function Car({ f, meta, units }: { f: LiveFrame; meta: SessionMeta | null
   const fuelPct = f.fuelL !== null && meta?.fuelMaxL ? Math.round(clamp(f.fuelL / meta.fuelMaxL, 0, 1) * 100) : 0
 
   // Estrategia: todo se deriva de combustible, vueltas y desgaste
-  const needL = f.lapsRemaining !== null && f.fuelPerLapL !== null && f.fuelL !== null ? f.lapsRemaining * f.fuelPerLapL - f.fuelL : null
+  const plan = fuelPlan(f, meta)
+  const needL = plan.needL
   const wearIdx = f.tyreWear ? f.tyreWear.indexOf(Math.min(...f.tyreWear)) : -1
   const boxRows: { k: string; v: string; color: string }[] = [
     { k: 'Autonomía', v: f.fuelLapsLeft !== null ? `${f.fuelLapsLeft.toFixed(1).replace('.', ',')} vueltas` : DASH, color: C.blanco },
     {
       k: 'Para terminar',
-      v: needL === null ? 'Sin vueltas fijas' : needL > 0 ? `Cargar ${fmt.fuel(needL, units).toFixed(1).replace('.', ',')} ${fuelU}` : 'Alcanza',
+      v: needL === null ? (plan.lapsToGo === null ? 'Sesión sin final' : 'Calculando consumo…') : needL > 0 ? `Cargar ${plan.estimated ? '≈ ' : ''}${fmt.fuel(needL, units).toFixed(1).replace('.', ',')} ${fuelU}` : 'Alcanza',
       color: needL === null ? C.niebla : needL > 0 ? C.alerta : C.record,
     },
     {

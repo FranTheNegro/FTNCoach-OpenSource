@@ -154,6 +154,7 @@ export class TelemetryEngine extends EventEmitter<EngineEvents> {
     this.frame = {
       ...rest,
       seq: ++this.seq,
+      sessionTimeS: s.clockS,
       bestLapS: s.bestLapS ?? this.tracker.bestLapS(),
       deltaS: simDeltaS ?? this.tracker.delta(s),
       fuelPerLapL: fuelPerLap,

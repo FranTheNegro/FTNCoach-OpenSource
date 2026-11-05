@@ -146,6 +146,7 @@ export function metaFromSessionInfo(info: SessionInfo, sim: SimId, sessionNum: n
     blinkRpm: num(di.DriverCarSLBlinkRPM),
     maxRpm: num(di.DriverCarRedLine),
     fuelMaxL: fuelMax !== null ? fuelMax * (fuelPct ?? 1) : null,
+    pitLimitKmh: num(w.TrackPitSpeedLimit),
     category: detectCategory({
       name: String(me?.CarScreenName ?? ''),
       id: me?.CarPath ? String(me.CarPath) : null,

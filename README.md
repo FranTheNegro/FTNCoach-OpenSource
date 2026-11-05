@@ -22,12 +22,19 @@ https://github.com/user-attachments/assets/02101a69-b295-483a-9d80-0f3c93866182
    navegador. La primera vez Windows pregunta si FTN Coach puede usar la red:
    aceptá para redes privadas.
 
+Arriba queda siempre la franja de sesión: tipo de sesión, cuánto queda (o cuánto va,
+si no tiene final), hora real y temperatura de pista y aire. En *Opciones → Skin*, la
+skin **AMOLED** deja la pantalla en negro puro y saca los adornos.
+
 El dashboard tiene seis páginas (se cambian tocando abajo o deslizando):
 
 - **En vivo:** shift lights que parpadean violeta al llegar al corte, marcha y
   velocidad, vuelta actual con delta, sectores, referencias (última, mejor e ideal),
   acelerador/freno/embrague con su traza, distancia con el de adelante y el de atrás
   (verde si lo alcanzás, rojo si se acerca), combustible, gomas y ajustes en pista.
+  Algunas zonas tienen varios paneles: tocá su borde derecho o izquierdo para
+  pasarlos, como diapositivas. Al entrar a boxes o activar el limitador, la pantalla
+  cambia sola: velocidad contra el límite, combustible para terminar y gomas.
 - **Auto:** temperatura de gomas en tres zonas, presión, desgaste, frenos, reparto
   de freno en barra con el 50 % marcado, agua, aceite y estrategia de box.
 - **Vueltas:** mejor vuelta, típica, consistencia y potencial (suma de mejores
@@ -59,6 +66,10 @@ sectores) y marca en el mapa las curvas donde perdés tiempo, con qué cambiar.
 También la compara con tus sesiones anteriores en el mismo auto y pista: si es
 nuevo PB y cuánto te separa de tu ideal histórica (la suma de tus mejores
 sectores). *Progreso* muestra esa evolución por combinación.
+
+En el análisis, el mapa y la telemetría están en columnas, uno al lado del otro. El
+mapa se mueve arrastrando y se acerca con la rueda, y los gráficos muestran el tramo
+que se ve en el mapa. Al revés también: elegir un tramo en un gráfico mueve el mapa.
 
 ### Mapa del circuito
 

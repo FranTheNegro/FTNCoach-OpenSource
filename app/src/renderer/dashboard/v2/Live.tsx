@@ -1,5 +1,6 @@
 /** Pantalla "En vivo": tiempos, conducción, rivales cercanos y estado del auto, con un layout por categoría. */
-import { ChevronsDown, ChevronsUp, Radio, Target, Timer, Trophy } from 'lucide-react'
+import { Children, useEffect, useState, type ReactNode } from 'react'
+import { ChevronLeft, ChevronRight, ChevronsDown, ChevronsUp, Radio, Target, Timer, Trophy, Undo2 } from 'lucide-react'
 import type { LapRecord, LiveFrame, SessionMeta } from '@shared/live'
 import type { Units } from '@shared/api'
 import * as fmt from '@ui/format'
@@ -7,6 +8,7 @@ import type { History } from '@ui/live-client'
 import { C, Chip, DASH, Ico, Lbl, clamp, signed, thousands, type ChipTone } from './kit'
 import type { DashTracker, RivalTrend, SectorState } from './tracker'
 import type { LayoutId } from './layouts'
+import { fuelPlan } from './fuel'
 
 interface Props {
   f: LiveFrame
@@ -15,6 +17,8 @@ interface Props {
   units: Units
   tracker: DashTracker
   history: History
+  panels: Record<string, number>
+  onPanel: (id: string, index: number) => void
 }
 
 const SEGMENTS = 24
@@ -30,6 +34,13 @@ export function tyreBand(c: number): { color: string; tag: string } {
 }
 
 export const TYRE_NAMES = ['DEL IZQ', 'DEL DER', 'TRAS IZQ', 'TRAS DER'] as const
+
+export function brakeColor(c: number): string {
+  if (c < 250) return C.azul
+  if (c <= 650) return C.blanco
+  if (c <= 800) return C.alerta
+  return C.error
+}
 
 // ── Luces de cambio ─────────────────────────────────────────────────────
 
@@ -208,20 +219,16 @@ interface Ctx extends Props {
   delta: number | null
   faster: boolean
   deltaColor: string
-  remaining: string | null
 }
 
 function TimingPanel({ c, title = 'actual' }: { c: Ctx; title?: string }) {
-  const { f, tracker, delta, faster, deltaColor, remaining } = c
+  const { f, tracker, delta, faster, deltaColor } = c
   const w = delta === null ? 0 : (Math.min(Math.abs(delta), DELTA_RANGE_S) / DELTA_RANGE_S) * 50
   return (
     <section className="d2-panel" style={{ gap: 8 }}>
-      <div className="d2-between">
-        <Lbl>
-          Vuelta {f.lap} · {title}
-        </Lbl>
-        {remaining && <span className="d2-mono" style={{ fontSize: 12, color: C.niebla }}>Resta {remaining}</span>}
-      </div>
+      <Lbl>
+        Vuelta {f.lap} · {title}
+      </Lbl>
       <div className="d2-mono d2-clock">{fmt.lapTime(tracker.lapTime(f), 3)}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
         <span className="d2-mono" style={{ fontWeight: 700, fontSize: 34, lineHeight: 1.1, color: deltaColor }}>
@@ -357,7 +364,7 @@ function RivalsPair({ c, big = false }: { c: Ctx; big?: boolean }) {
 function CoachBar({ c }: { c: Ctx }) {
   const advice = adviceOf(c.f, c.units)
   return (
-    <section className="d2-coach">
+    <section className={`d2-coach ${advice.tone === 'alert' || advice.tone === 'error' ? '' : 'calm'}`}>
       <Ico icon={Radio} size={24} color={C.azul} />
       <span className="d2-mono" style={{ fontSize: 12, letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>{advice.tag}</span>
       <span style={{ fontSize: 14, color: C.plata, flex: 1, minWidth: 0 }}>{advice.text}</span>
@@ -546,10 +553,258 @@ function StagePanel({ c }: { c: Ctx }) {
   )
 }
 
+/** Las últimas vueltas, la más nueva arriba. */
+function RecentLapsPanel({ c }: { c: Ctx }) {
+  const { laps, f } = c
+  const rows = [...laps].sort((a, b) => b.lap - a.lap).slice(0, 5)
+  return (
+    <section className="d2-panel fill" style={{ gap: 2 }}>
+      <Lbl>Últimas vueltas</Lbl>
+      {!rows.length && <span style={{ fontSize: 13, color: C.niebla, marginTop: 8 }}>Todavía sin vueltas.</span>}
+      {rows.map((l) => {
+        const diff = f.bestLapS !== null ? l.timeS - f.bestLapS : null
+        const color = l.best ? C.mejor : l.kind === 'valid' ? C.blanco : C.niebla
+        return (
+          <div key={l.lap} className="d2-ref" style={{ padding: '6px 0' }}>
+            <span className="d2-mono" style={{ fontSize: 12, color: C.niebla }}>V{l.lap}</span>
+            <span className="d2-mono" style={{ fontWeight: 700, fontSize: 18, color }}>{fmt.lapTime(l.timeS)}</span>
+            <span className="d2-mono" style={{ fontSize: 13, color: l.best ? C.mejor : C.niebla }}>{l.best ? 'MEJOR' : signed(diff, 3)}</span>
+          </div>
+        )
+      })}
+    </section>
+  )
+}
+
+/** Frenos: solo si el simulador publica su temperatura (Assetto Corsa; iRacing no). */
+function BrakesPanel({ c }: { c: Ctx }) {
+  const { f, units } = c
+  return (
+    <section className="d2-panel fill">
+      <Lbl>Frenos</Lbl>
+      <div className="d2-grid2">
+        {TYRE_NAMES.map((name, i) => {
+          const t = f.brakeTempC?.[i]
+          const ok = t !== undefined && t > 0
+          return (
+            <div key={name} className="d2-tile" style={{ padding: '10px 12px', gap: 3 }}>
+              <Lbl style={{ letterSpacing: '0.08em', fontSize: 10 }}>{name}</Lbl>
+              <div className="d2-mono" style={{ fontWeight: 700, fontSize: 26, lineHeight: 1.1, color: ok ? brakeColor(t) : C.niebla }}>
+                {ok ? Math.round(fmt.temp(t, units)) : DASH}
+                <span style={{ fontSize: 13, fontWeight: 500 }}> {fmt.unitLabel.temp(units)}</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+/** Los autos que tenés más cerca en pista (solo iRacing). */
+function NearbyPanel({ c }: { c: Ctx }) {
+  const cars = c.f.rivals?.cars ?? []
+  const me = cars.findIndex((x) => x.me)
+  const rows = me < 0 ? cars.slice(0, 5) : cars.slice(Math.max(0, me - 2), me + 3)
+  return (
+    <section className="d2-panel fill" style={{ gap: 2 }}>
+      <Lbl>Cerca en pista</Lbl>
+      {rows.map((car) => (
+        <div key={car.idx} className="d2-ref" style={{ padding: '7px 0' }}>
+          <span className="d2-mono" style={{ fontSize: 12, color: C.niebla }}>{car.position ? `P${car.position}` : DASH}</span>
+          <span style={{ fontSize: 14, fontWeight: car.me ? 700 : 500, color: car.me ? C.azul : car.inPit ? C.niebla : C.blanco, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {car.name}
+          </span>
+          <span className="d2-mono" style={{ fontWeight: 700, fontSize: 15, color: car.me ? C.azul : C.plata }}>{car.me ? '' : signed(car.gapS, 1)}</span>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+/** Temperaturas de motor y del ambiente. */
+function EnginePanel({ c, fill = true }: { c: Ctx; fill?: boolean }) {
+  const { f, units } = c
+  const temp = (v: number | null | undefined) => (v === null || v === undefined || v <= 0 ? DASH : `${Math.round(fmt.temp(v, units))} ${fmt.unitLabel.temp(units)}`)
+  return (
+    <section className={`d2-panel ${fill ? 'fill' : ''}`}>
+      <Lbl>Motor y ambiente</Lbl>
+      <div className="d2-grid2">
+        <Setting k="AGUA" v={temp(f.waterTempC)} />
+        <Setting k="ACEITE" v={temp(f.oilTempC)} />
+        <Setting k="PISTA" v={temp(f.trackTempC)} />
+        <Setting k="AIRE" v={temp(f.airTempC)} />
+      </div>
+    </section>
+  )
+}
+
+// ── Paneles alternables ─────────────────────────────────────────────────
+
+/**
+ * Una zona con varios paneles: tocar el borde derecho pasa al siguiente y el izquierdo
+ * vuelve al anterior, como diapositivas. Todos ocupan la misma celda, así la zona mide
+ * siempre lo mismo y nada salta alrededor. La elección queda guardada en la tablet.
+ */
+function Cycle({ id, c, fill = false, children }: { id: string; c: Ctx; fill?: boolean; children: ReactNode }) {
+  const items = Children.toArray(children)
+  const n = items.length
+  const index = n ? (((c.panels[id] ?? 0) % n) + n) % n : 0
+  const [anim, setAnim] = useState<{ from: number; dir: 1 | -1 } | null>(null)
+  const go = (dir: 1 | -1) => {
+    setAnim({ from: index, dir })
+    c.onPanel(id, (index + dir + n) % n)
+  }
+  return (
+    <div className={`d2-cycle ${fill ? 'fill' : ''}`}>
+      {items.map((item, i) => {
+        const motion = !anim ? '' : i === index ? (anim.dir > 0 ? 'enter-next' : 'enter-prev') : i === anim.from ? (anim.dir > 0 ? 'leave-next' : 'leave-prev') : ''
+        return (
+          <div key={i} className={`d2-cycle-item ${i === index ? 'on' : ''} ${motion}`} aria-hidden={i !== index}>
+            {item}
+          </div>
+        )
+      })}
+      {n > 1 && (
+        <>
+          <button className="d2-cycle-hit prev" onClick={() => go(-1)} aria-label="Panel anterior">
+            <Ico icon={ChevronLeft} size={24} />
+          </button>
+          <button className="d2-cycle-hit next" onClick={() => go(1)} aria-label="Panel siguiente">
+            <Ico icon={ChevronRight} size={24} />
+          </button>
+          <div className="d2-cycle-dots" aria-hidden="true">
+            {items.map((_, i) => (
+              <i key={i} className={i === index ? 'on' : ''} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function TimesCycle({ c }: { c: Ctx }) {
+  return (
+    <Cycle id="times" c={c} fill>
+      <RefsPanel c={c} />
+      <RecentLapsPanel c={c} />
+      <RacePanel c={c} />
+    </Cycle>
+  )
+}
+
+function TyresCycle({ c, fill = false }: { c: Ctx; fill?: boolean }) {
+  return (
+    <Cycle id="tyres" c={c} fill={fill}>
+      <TyresPanel c={c} fill />
+      {c.f.brakeTempC && <BrakesPanel c={c} />}
+      {c.f.rivals && <NearbyPanel c={c} />}
+    </Cycle>
+  )
+}
+
+function AidsCycle({ c, fill = false }: { c: Ctx; fill?: boolean }) {
+  return (
+    <Cycle id="aids" c={c} fill={fill}>
+      <AidsPanel c={c} />
+      <EnginePanel c={c} />
+    </Cycle>
+  )
+}
+
+// ── Modo boxes ──────────────────────────────────────────────────────────
+
+/** Al entrar a boxes o activar el limitador: velocidad contra el límite, combustible y gomas. */
+function PitView({ c, onClose }: { c: Ctx; onClose: () => void }) {
+  const { f, meta, units } = c
+  const fuelU = fmt.unitLabel.fuel(units)
+  const speedU = fmt.unitLabel.speed(units)
+  const limit = meta?.pitLimitKmh ?? null
+  const overBy = limit !== null ? f.speedKmh - limit : 0
+  const over = overBy > 0.5
+  // Parado en el box es normal tener el limitador apagado: la alarma es solo si te movés
+  const missing = !f.pitLimiter && f.speedKmh > 5
+  const state = over
+    ? { text: `Pasado ${Math.round(fmt.speed(overBy, units))} ${speedU}`, color: C.error }
+    : f.pitLimiter
+      ? { text: 'Limitador activado', color: C.record }
+      : missing
+        ? { text: 'Activá el limitador', color: C.error }
+        : { text: 'Limitador apagado', color: C.niebla }
+  const plan = fuelPlan(f, meta)
+  const liters = (v: number) => `${fmt.fuel(v, units).toFixed(1).replace('.', ',')} ${fuelU}`
+  const loadText = plan.needL === null ? DASH : plan.needL <= 0 ? 'Alcanza' : `${plan.estimated ? '≈ ' : ''}${liters(plan.loadL ?? 0)}`
+  const loadNote =
+    plan.lapsToGo === null
+      ? 'La sesión no tiene final'
+      : plan.needL === null
+        ? 'Calculando consumo…'
+        : plan.short
+          ? 'Con el tanque lleno no llegás: hace falta otra parada'
+          : plan.needL <= 0
+            ? `Te sobran ${liters(-plan.needL)} para las ${plan.lapsToGo} vueltas que faltan`
+            : `Para ${plan.estimated ? 'unas ' : 'las '}${plan.lapsToGo} vueltas que faltan${plan.estimated ? ', con tu ritmo' : ''}`
+  return (
+    <main className="d2-body d2-pit">
+      <div className="d2-colv">
+        <section className={`d2-pitlim ${over || missing ? 'alarm' : ''}`}>
+          <div className="d2-between">
+            <span className="d2-pitstate" style={{ color: state.color }}>{state.text}</span>
+            <button className="d2-pitback" onClick={onClose}>
+              <Ico icon={Undo2} size={18} />
+              Volver al dashboard
+            </button>
+          </div>
+          <div className="d2-gearrow">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <Lbl>Límite</Lbl>
+              <span className="d2-mono" style={{ fontWeight: 700, fontSize: 38, lineHeight: 1, color: limit !== null ? C.blanco : C.niebla }}>
+                {limit !== null ? Math.round(fmt.speed(limit, units)) : DASH}
+              </span>
+            </div>
+            <div className="d2-display d2-gear" style={{ color: f.pitLimiter ? C.record : C.blanco }}>{fmt.gear(f.gear)}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+              <Lbl>{speedU}</Lbl>
+              <span className="d2-mono" style={{ fontWeight: 700, fontSize: 96, lineHeight: 1, color: over ? C.error : C.blanco }}>{Math.round(fmt.speed(f.speedKmh, units))}</span>
+            </div>
+          </div>
+          {limit !== null && (
+            <div className="d2-progress">
+              <i style={{ width: `${Math.round(clamp(f.speedKmh / limit, 0, 1) * 100)}%`, background: over ? C.error : C.azul }} />
+            </div>
+          )}
+        </section>
+        <section className="d2-panel fill" style={{ gap: 12 }}>
+          <Lbl>Combustible para terminar</Lbl>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+            <span className="d2-mono" style={{ fontWeight: 700, fontSize: 56, lineHeight: 1, whiteSpace: 'nowrap', color: plan.needL !== null && plan.needL > 0 ? C.alerta : plan.needL !== null ? C.record : C.niebla }}>{loadText}</span>
+            <span style={{ fontSize: 15, color: C.plata }}>{loadNote}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+            <Setting k="EN EL TANQUE" v={f.fuelL !== null ? liters(f.fuelL) : DASH} />
+            <Setting k="POR VUELTA" v={f.fuelPerLapL !== null ? liters(f.fuelPerLapL) : DASH} />
+            <Setting k="AUTONOMÍA" v={f.fuelLapsLeft !== null ? `${f.fuelLapsLeft.toFixed(1).replace('.', ',')} v` : DASH} />
+          </div>
+        </section>
+      </div>
+      <div className="d2-colv">
+        <TyresPanel c={c} fill />
+      </div>
+    </main>
+  )
+}
+
 // ── Pantalla ────────────────────────────────────────────────────────────
 
 export function Live(props: Props & { layout: LayoutId }) {
   const { f, meta, tracker, layout } = props
+  // En boxes la pantalla cambia sola; "Volver" vale hasta la próxima vez que entres
+  const inPits = !f.paused && (f.inPit || f.pitLimiter)
+  const [pitClosed, setPitClosed] = useState(false)
+  useEffect(() => {
+    if (!inPits) setPitClosed(false)
+  }, [inPits])
   const delta = f.deltaS
   const faster = delta !== null && delta < 0
   const c: Ctx = {
@@ -558,8 +813,9 @@ export function Live(props: Props & { layout: LayoutId }) {
     delta,
     faster,
     deltaColor: delta === null ? C.niebla : faster ? C.record : delta === 0 ? C.blanco : C.alerta,
-    remaining: f.timeRemainingS !== null ? fmt.clock(f.timeRemainingS) : f.lapsRemaining !== null ? `${f.lapsRemaining} v` : null,
   }
+
+  if (inPits && !pitClosed) return <PitView c={c} onClose={() => setPitClosed(true)} />
 
   if (layout === 'formula')
     return (
@@ -567,7 +823,7 @@ export function Live(props: Props & { layout: LayoutId }) {
         <div className="d2-colv">
           <TimingPanel c={c} />
           <SectorsPanel c={c} />
-          <RefsPanel c={c} />
+          <TimesCycle c={c} />
         </div>
         <div className="d2-colv">
           <Hero c={c} />
@@ -575,8 +831,8 @@ export function Live(props: Props & { layout: LayoutId }) {
         </div>
         <div className="d2-colv">
           <RivalsPair c={c} />
-          <TyresPanel c={c} fill />
-          <AidsPanel c={c} fill={false} />
+          <TyresCycle c={c} fill />
+          <AidsCycle c={c} />
         </div>
       </main>
     )
@@ -595,8 +851,8 @@ export function Live(props: Props & { layout: LayoutId }) {
           <CoachBar c={c} />
         </div>
         <div className="d2-colv">
-          <TyresPanel c={c} fill />
-          <AidsPanel c={c} fill={false} />
+          <TyresCycle c={c} fill />
+          <AidsCycle c={c} />
         </div>
       </main>
     )
@@ -610,7 +866,7 @@ export function Live(props: Props & { layout: LayoutId }) {
         </div>
         <div className="d2-colv">
           <StagePanel c={c} />
-          <TyresPanel c={c} />
+          <TyresCycle c={c} />
         </div>
       </main>
     )
@@ -621,7 +877,7 @@ export function Live(props: Props & { layout: LayoutId }) {
       <div className="d2-colv">
         <TimingPanel c={c} />
         <SectorsPanel c={c} />
-        <RefsPanel c={c} />
+        <TimesCycle c={c} />
       </div>
 
       {/* Columna central: conducción */}
@@ -634,8 +890,8 @@ export function Live(props: Props & { layout: LayoutId }) {
       {/* Columna derecha: auto */}
       <div className="d2-colv">
         <FuelPanel c={c} />
-        <TyresPanel c={c} />
-        <AidsPanel c={c} />
+        <TyresCycle c={c} />
+        <AidsCycle c={c} fill />
       </div>
     </main>
   )

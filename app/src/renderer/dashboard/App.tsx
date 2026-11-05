@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, Ellipsis, FlaskConical, Flag as FlagIcon, Gauge, Map as MapIcon, Maximize, Plug, Timer, Unplug, Users, Wrench, Wifi, WifiOff, type LucideIcon } from 'lucide-react'
-import { SIM_LABEL, type Flag } from '@shared/live'
+import { SIM_LABEL } from '@shared/live'
 import { LiveClient, useLive } from '@ui/live-client'
 import { LogoHorizontal, Monogram } from '@ui/Logo'
 import { usePrefs, type PageId } from './prefs'
-import { FLAG_INFO, FlagFrame } from './widgets'
+import { FLAG_INFO, FlagFrame, useShownFlag } from './widgets'
 import { Inputs } from './v2/Inputs'
 import { TrackMap } from './v2/MapPage'
 import { StageMap } from './v2/StageMap'
@@ -12,6 +12,7 @@ import { Car } from './v2/Car'
 import { Laps } from './v2/Laps'
 import { Live } from './v2/Live'
 import { Rivals } from './v2/Rivals'
+import { SessionStrip } from './v2/SessionStrip'
 import { C, Chip, Ico, Stage } from './v2/kit'
 import { applySkin, layoutFor, LAYOUT_IDS, LAYOUTS, SKIN_IDS, SKINS } from './v2/layouts'
 import { DashTracker } from './v2/tracker'
@@ -49,12 +50,6 @@ function useWakeLock(on: boolean): boolean {
     }
   }, [on, supported])
   return supported
-}
-
-/** Bandera a mostrar abajo a la derecha: la más importante que no sea la verde de siempre. */
-function flagLabel(flags: Flag[]): { label: string; color: string } | null {
-  const flag = flags.find((x) => x !== 'green') ?? (flags.includes('green') ? 'green' : null)
-  return flag ? { label: FLAG_INFO[flag].label, color: FLAG_INFO[flag].color } : null
 }
 
 export function App() {
@@ -125,42 +120,39 @@ export function App() {
   const meta = live.meta
   const detected = layoutFor(meta?.category)
   const layout = prefs.layoutAuto ? detected : prefs.layout
-  const flag = f ? flagLabel(f.flags) : null
+  const shownFlag = useShownFlag(f?.flags ?? [])
+  const flag = shownFlag ? FLAG_INFO[shownFlag] : null
   const simName = connectedToSim && status?.sim ? SIM_LABEL[status.sim] : live.connected ? 'Sin simulador' : 'Sin conexión'
 
   return (
     <Stage>
       <header className="d2-head">
-        <LogoHorizontal height={44} />
-        <div className="d2-sim" aria-label="Simulador">
+        <span className="d2-logo">
+          <LogoHorizontal height={44} />
+        </span>
+        <div className="d2-sim" role="img" aria-label={simName} title={simName}>
           <Ico icon={connectedToSim ? Plug : Unplug} size={20} color={connectedToSim ? C.record : live.connected ? C.alerta : C.niebla} />
-          {simName}
         </div>
-        <div className="d2-chips">
+        <div className="d2-who">
           {connectedToSim && meta && (
             <>
-              <Chip>{meta.car}</Chip>
-              <Chip>{meta.track}</Chip>
-              <Chip>{meta.sessionType}</Chip>
+              <span>{meta.car}</span>
+              <span>{meta.track}</span>
             </>
+          )}
+        </div>
+        <div className="d2-chips">
+          {status?.sim === 'replay' && (
+            <Chip tone="alert">
+              <Ico icon={FlaskConical} size={14} />
+              Demo
+            </Chip>
           )}
           {f?.position && <Chip tone="highlight">{`P${f.position}${f.carsInSession ? ` de ${f.carsInSession}` : ''}`}</Chip>}
           {f?.incidents ? <Chip tone="alert">{`Inc. ${f.incidents}x`}</Chip> : null}
         </div>
+        <SessionStrip f={connectedToSim ? f : null} meta={connectedToSim ? meta : null} units={prefs.units} />
         <div className="d2-head-right">
-          <span className="d2-note">
-            {status?.sim === 'replay' ? (
-              <>
-                <Ico icon={FlaskConical} size={18} color={C.alerta} />
-                Datos de demo
-              </>
-            ) : (
-              <>
-                <Ico icon={live.connected ? Wifi : WifiOff} size={18} color={live.connected ? C.record : C.niebla} />
-                {connectedToSim && status ? `${status.hz} Hz` : 'Sin datos'}
-              </>
-            )}
-          </span>
           <button className="d2-iconbtn" onClick={() => setMenu((m) => !m)} aria-label="Opciones">
             <Ico icon={Ellipsis} size={22} />
           </button>
@@ -176,7 +168,7 @@ export function App() {
         onPointerUp={onPointerUp}
         onPointerCancel={() => (swipe.current = null)}
       >
-        {f && prefs.page === 'live' && <Live f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} history={client.history} layout={layout} />}
+        {f && prefs.page === 'live' && <Live f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} history={client.history} layout={layout} panels={prefs.panels} onPanel={(id, i) => setPrefs({ panels: { ...prefs.panels, [id]: i } })} />}
         {f && prefs.page === 'car' && <Car f={f} meta={meta} units={prefs.units} />}
         {f && prefs.page === 'laps' && <Laps f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} />}
         {f && prefs.page === 'rivals' && <Rivals f={f} meta={meta} tracker={tracker} />}
@@ -199,8 +191,8 @@ export function App() {
         </div>
         <div className="d2-nav-right">
           {flag && (
-            <span className="d2-flag">
-              <Ico icon={FlagIcon} size={22} color={flag.color} />
+            <span className="d2-flag" style={{ color: flag.color }}>
+              <Ico icon={FlagIcon} size={24} color={flag.color} />
               {flag.label}
             </span>
           )}
@@ -209,6 +201,13 @@ export function App() {
 
       {menu && (
         <div className="menu" role="menu">
+          <div className="menu-info">
+            <span>Conexión</span>
+            <span>
+              <Ico icon={live.connected ? Wifi : WifiOff} size={16} color={live.connected ? C.record : C.niebla} />
+              {connectedToSim && status ? `${simName} · ${status.hz} Hz` : simName}
+            </span>
+          </div>
           <button onClick={() => setPrefs({ units: prefs.units === 'metric' ? 'imperial' : 'metric' })}>
             <span>Unidades</span>
             <span>{prefs.units === 'metric' ? 'km/h · °C · L' : 'mph · °F · gal'}</span>
@@ -249,7 +248,7 @@ export function App() {
         </div>
       )}
 
-      {f && <FlagFrame flags={f.flags} />}
+      <FlagFrame flag={shownFlag} />
     </Stage>
   )
 }

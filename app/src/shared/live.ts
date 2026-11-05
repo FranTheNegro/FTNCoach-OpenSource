@@ -115,6 +115,8 @@ export interface LiveFrame {
   lapsTotal: number | null
   lapsRemaining: number | null
   timeRemainingS: number | null
+  /** Segundos desde que empezó la sesión (para las sesiones sin final). */
+  sessionTimeS?: number | null
 
   fuelL: number | null
   /** Promedio de las últimas vueltas limpias. */
@@ -164,6 +166,8 @@ export interface SessionMeta {
   blinkRpm: number | null
   maxRpm: number | null
   fuelMaxL: number | null
+  /** Velocidad máxima en boxes, si el sim la informa (km/h). */
+  pitLimitKmh?: number | null
   /** Categoría del auto (para el layout automático del dashboard). */
   category?: CarCategory | null
 }
@@ -199,6 +203,17 @@ export type ServerMessage =
   | { type: 'laps'; laps: LapRecord[] }
   /** Latido cada segundo: el dashboard sabe que la conexión sigue viva aunque no haya frames. */
   | { type: 'ping' }
+
+/** Tipo de sesión en español. iRacing lo manda en inglés ("Lone Qualify"); AC ya viene traducido. */
+export function sessionLabel(type: string | null | undefined): string {
+  const t = (type ?? '').toLowerCase()
+  if (/race|heat/.test(t)) return 'Carrera'
+  if (/qual/.test(t)) return 'Clasificación'
+  if (/warm/.test(t)) return 'Warmup'
+  if (/practice/.test(t)) return 'Práctica'
+  if (/test/.test(t)) return 'Prueba'
+  return type || 'Sesión'
+}
 
 export const LAP_KIND_LABEL: Record<LapKind, string> = {
   valid: 'Válida',
