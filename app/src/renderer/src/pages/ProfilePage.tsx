@@ -3,11 +3,14 @@
  * contexto), su estilo de manejo medido, sus récords y dónde deja tiempo.
  */
 import { useEffect, useState, type ReactNode } from 'react'
-import { type LucideIcon, Medal, Repeat, Target, TrendingDown, TrendingUp, Trophy, User } from 'lucide-react'
+import { type LucideIcon, Medal, MessageSquareText, Repeat, Target, TrendingDown, TrendingUp, Trophy, User } from 'lucide-react'
 import { BrakePedal, ThrottlePedal, TrailBrake, Tyre } from '@ui/icons'
 import type { DriverStyle } from '@shared/analysis'
 import type { Settings } from '@shared/api'
+import { SIM_LABEL } from '@shared/live'
+import { COACH_QUIZ, answerLabels, type CoachStyle } from '@shared/coach-quiz'
 import * as fmt from '@ui/format'
+import { CoachQuiz } from '../components/CoachQuiz'
 import { Button, Card, Label, PageHeader } from '../components/ui'
 import { useSettings } from '../hooks'
 import { hours, useProgress } from './ProgressPage'
@@ -88,6 +91,43 @@ function ProfileForm({ value, onSave, onCancel }: { value: Settings['profile']; 
   )
 }
 
+/** Cómo quiere el piloto que le hable su coach. Se cambia cuando quiera. */
+function YourCoach({ value, onSave }: { value: CoachStyle; onSave: (s: CoachStyle) => Promise<void> }) {
+  const [editing, setEditing] = useState(false)
+  if (editing)
+    return (
+      <CoachQuiz
+        value={value}
+        onCancel={() => setEditing(false)}
+        onDone={async (s) => {
+          await onSave(s)
+          setEditing(false)
+        }}
+      />
+    )
+  const rows = COACH_QUIZ.map((q) => ({ q, labels: answerLabels(q, value.answers[q.id]) })).filter((x) => x.labels.length)
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <Label icon={MessageSquareText}>Tu coach</Label>
+        <Button onClick={() => setEditing(true)}>{value.completedAt ? 'Cambiar' : 'Armar mi coach'}</Button>
+      </div>
+      {rows.length ? (
+        <dl className="mt-3 grid grid-cols-[minmax(0,260px)_minmax(0,1fr)] gap-x-4 gap-y-2 text-[14px] leading-snug">
+          {rows.map(({ q, labels }) => (
+            <div key={q.id} className="contents">
+              <dt className="text-niebla">{q.title}</dt>
+              <dd className="whitespace-pre-wrap">{labels.join(' · ')}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="mt-2 text-plata leading-relaxed">Contestá unas preguntas y el coach te habla como vos quieras: cuánta técnica, en qué tono y con qué objetivo.</p>
+      )}
+    </Card>
+  )
+}
+
 const TRAIT_ICON: Record<DriverStyle['traits'][number]['id'], LucideIcon> = {
   braking: BrakePedal,
   trail: TrailBrake,
@@ -164,6 +204,12 @@ export function ProfilePage() {
           </>
         )}
         {(empty || editing) && <ProfileForm value={p} onSave={save} onCancel={editing ? () => setEditing(false) : undefined} />}
+        <YourCoach
+          value={s.coachStyle}
+          onSave={async (coachStyle) => {
+            setS(await window.ftn.saveSettings({ coachStyle }))
+          }}
+        />
 
 
         <div className="grid grid-cols-4 gap-4">
@@ -244,7 +290,7 @@ export function ProfilePage() {
                   key={c.key}
                   icon={Trophy}
                   title={c.track}
-                  sub={`${c.car} · ${c.sim === 'ac' ? 'Assetto Corsa' : 'iRacing'}`}
+                  sub={`${c.car} · ${SIM_LABEL[c.sim]}`}
                   color="var(--ftn-mejor)"
                   value={<span className="text-mejor">{fmt.lapTime(Math.min(...c.points.map((x) => x.bestS)))}</span>}
                 />

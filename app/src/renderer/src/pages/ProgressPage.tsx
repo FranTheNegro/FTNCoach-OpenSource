@@ -17,7 +17,7 @@ interface Combo {
   key: string
   track: string
   car: string
-  sim: 'iracing' | 'ac'
+  sim: 'iracing' | 'ac' | 'acr'
   points: { day: string; bestS: number }[]
   sessions: number
   timeS: number | null
@@ -30,7 +30,7 @@ interface Group {
   key: string
   track: string
   car: string
-  sim: 'iracing' | 'ac'
+  sim: 'iracing' | 'ac' | 'acr'
   days: Map<string, number>
   list: SessionSummary[]
   timeS: number

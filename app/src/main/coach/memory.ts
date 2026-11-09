@@ -22,7 +22,9 @@ export interface MemorySources {
 }
 
 /** Lo que usa la memoria de cada curva de `coachData`. */
-interface CornerData {
+export interface CornerData {
+  corner_id?: number
+  repeatable_gain_s?: number | null
   label: string
   name: string | null
   apex_pct: number | null
@@ -31,7 +33,7 @@ interface CornerData {
   median_clean: { segment_time_s: number | null; min_kmh: number | null } | null
 }
 
-const cornersOf = (data: Record<string, unknown>): CornerData[] => (Array.isArray(data.corners) ? (data.corners as CornerData[]) : [])
+export const cornersOf = (data: Record<string, unknown>): CornerData[] => (Array.isArray(data.corners) ? (data.corners as CornerData[]) : [])
 
 const round = (v: number, k: number) => Math.round(v * 10 ** k) / 10 ** k
 const day = (ms: number) => new Date(ms).toISOString().slice(0, 10)
@@ -40,7 +42,7 @@ const day = (ms: number) => new Date(ms).toISOString().slice(0, 10)
 const cornerKey = (s: string) => s.trim().toLowerCase().replace(/^t(?=\d)/, '')
 
 /** La curva de una corrección, por el título que escribió el coach ("T7 · FRENADA"). */
-function cornerOfTitle(title: string, corners: CornerData[]): CornerData | null {
+export function cornerOfTitle(title: string, corners: CornerData[]): CornerData | null {
   const head = cornerKey(title.split('·')[0])
   const first = head.split(/\s+/)[0]
   const matches = (c: CornerData, text: string) => cornerKey(c.label) === text || (c.name !== null && cornerKey(c.name) === text)

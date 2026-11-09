@@ -31,7 +31,7 @@ const api: FtnApi = {
   trackMap: (trackId, slug) => ipcRenderer.invoke('track:map', trackId, slug),
 
   coachState: (id) => ipcRenderer.invoke('coach:state', id),
-  coachAnalyze: (id, lap) => ipcRenderer.invoke('coach:analyze', id, lap),
+  coachAnalyze: (id) => ipcRenderer.invoke('coach:analyze', id),
   coachAsk: (id, q) => ipcRenderer.invoke('coach:ask', id, q),
   coachClear: (id) => ipcRenderer.invoke('coach:clear', id),
   onCoach: (cb) => listen<CoachState>('coach:changed', cb),

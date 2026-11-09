@@ -7,7 +7,7 @@ import { useLibrary } from '../hooks'
 import { SessionDetailView } from '../sessions/SessionDetail'
 import { groupEvents, sessionLabel, sessionNames, type SessionEvent } from '@shared/events'
 
-const SIM = { iracing: 'iRacing', ac: 'Assetto Corsa' } as const
+const SIM = { iracing: 'iRacing', ac: 'Assetto Corsa', acr: 'Assetto Corsa Rally' } as const
 
 function dayKey(ms: number): string {
   return new Date(ms).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })

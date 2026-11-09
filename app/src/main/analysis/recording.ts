@@ -39,19 +39,36 @@ export const REC_COLUMNS = [
   'inPit',
   'posX',
   'posZ',
+  // Temperatura de cada goma (delanteras y traseras: izquierda, derecha)
+  'tyreT0', 'tyreT1', 'tyreT2', 'tyreT3',
+  // Por zona: interior, centro y exterior
+  'tyreI0', 'tyreI1', 'tyreI2', 'tyreI3',
+  'tyreM0', 'tyreM1', 'tyreM2', 'tyreM3',
+  'tyreO0', 'tyreO1', 'tyreO2', 'tyreO3',
+  'tyreP0', 'tyreP1', 'tyreP2', 'tyreP3',
+  'wear0', 'wear1', 'wear2', 'wear3',
+  'brakeT0', 'brakeT1', 'brakeT2', 'brakeT3',
+  'wheel0', 'wheel1', 'wheel2', 'wheel3',
+  'susp0', 'susp1', 'susp2', 'susp3',
+  'rideF', 'rideR',
+  'absOn',
+  // Rally: distancia desde la largada, largo del tramo y estado (0 idle, 1 ready, 2 running, 3 finished)
+  'stageDist', 'stageLen', 'stageState',
 ] as const
 
 export type RecColumn = (typeof REC_COLUMNS)[number]
 
 export interface RecHeader {
   version: 1
-  sim: 'iracing' | 'ac'
+  sim: 'iracing' | 'ac' | 'acr'
   car: string
   track: string
   trackId: string | null
   trackSlug: string | null
   trackLengthM: number | null
   sectorsPct: number[] | null
+  /** Rally: parciales del tramo (m desde la largada). */
+  stageSplitsM?: number[] | null
   sessionType: string
   driver: string | null
   startedAt: number
@@ -107,6 +124,14 @@ function stamp(d: Date): string {
 }
 
 const FLUSH_MS = 5000
+const STAGE_STATE = { idle: 0, ready: 1, running: 2, finished: 3 } as const
+
+/** Redondea lo que cambia despacio: con valores repetidos el gzip comprime mucho mejor. */
+const quant = (v: number | null | undefined, step: number) => (v === null || v === undefined || !Number.isFinite(v) ? NaN : Math.round(v / step) * step)
+/** Columnas de una magnitud por rueda. */
+function wheels<P extends string>(prefix: P, q: readonly number[] | null | undefined, step: number) {
+  return Object.fromEntries([0, 1, 2, 3].map((i) => [`${prefix}${i}`, quant(q?.[i], step)])) as Record<`${P}${0 | 1 | 2 | 3}`, number>
+}
 const ROW = new Float32Array(REC_COLUMNS.length)
 
 /**
@@ -123,6 +148,8 @@ export class Recorder {
   private lastLap: number | null = null
   private lastFlush = 0
   private chunk: Buffer[] = []
+  /** Rally: terminó al menos una pasada (el número de pasada recién cambia en la siguiente). */
+  private finishedStage = false
 
   constructor(private dir: () => string) {}
 
@@ -144,6 +171,7 @@ export class Recorder {
     }
     if (s.paused) return
     if (this.lastLap !== null && s.lap === this.lastLap + 1) this.laps++
+    if (s.stage?.state === 'finished') this.finishedStage = true
     this.lastLap = s.lap
 
     const v: Record<RecColumn, number> = {
@@ -166,6 +194,21 @@ export class Recorder {
       inPit: s.inPit ? 1 : 0,
       posX: s.pos ? s.pos[0] : NaN,
       posZ: s.pos ? s.pos[1] : NaN,
+      ...wheels('tyreT', s.tyreTempC, 0.1),
+      ...wheels('tyreI', s.tyreZonesC?.map((z) => z[0]), 0.1),
+      ...wheels('tyreM', s.tyreZonesC?.map((z) => z[1]), 0.1),
+      ...wheels('tyreO', s.tyreZonesC?.map((z) => z[2]), 0.1),
+      ...wheels('tyreP', s.tyrePressKpa, 0.1),
+      ...wheels('wear', s.tyreWear, 0.001),
+      ...wheels('brakeT', s.brakeTempC, 0.5),
+      ...wheels('wheel', s.wheelKmh, 0.1),
+      ...wheels('susp', s.suspM, 0.0001),
+      rideF: quant(s.rideHeightM?.[0], 0.0001),
+      rideR: quant(s.rideHeightM?.[1], 0.0001),
+      absOn: s.absActive === null || s.absActive === undefined ? NaN : s.absActive ? 1 : 0,
+      stageDist: s.stage ? quant(s.stage.distM, 0.1) : NaN,
+      stageLen: s.stage?.lengthM ?? NaN,
+      stageState: s.stage ? STAGE_STATE[s.stage.state] : NaN,
     }
     REC_COLUMNS.forEach((c, j) => (ROW[j] = v[c]))
     this.chunk.push(Buffer.from(ROW.buffer.slice(0)))
@@ -186,13 +229,14 @@ export class Recorder {
     this.file = join(dir, name + REC_EXT)
     const header: RecHeader = {
       version: 1,
-      sim: meta.sim === 'ac' ? 'ac' : 'iracing',
+      sim: meta.sim === 'ac' || meta.sim === 'acr' ? meta.sim : 'iracing',
       car: meta.car,
       track: meta.track,
       trackId: meta.trackId,
       trackSlug: meta.trackSlug,
       trackLengthM: meta.trackLengthM,
       sectorsPct: meta.sectorsPct,
+      stageSplitsM: meta.stageSplitsM ?? null,
       sessionType: meta.sessionType,
       driver: meta.driver,
       startedAt: started.getTime(),
@@ -203,6 +247,7 @@ export class Recorder {
     this.gz.pipe(this.out)
     this.gz.write(`${MAGIC}\n${JSON.stringify(header)}\n`)
     this.laps = 0
+    this.finishedStage = false
     this.lastLap = null
     this.lastFlush = Date.now()
     console.log('[recorder] grabando', this.file)
@@ -219,7 +264,7 @@ export class Recorder {
     const gz = this.gz
     const out = this.out
     const file = this.file
-    const keep = this.laps >= 1
+    const keep = this.laps >= 1 || this.finishedStage
     this.write()
     this.gz = null
     this.out = null

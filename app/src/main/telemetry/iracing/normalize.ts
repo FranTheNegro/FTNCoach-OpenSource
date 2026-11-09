@@ -58,6 +58,14 @@ function quad(r: RowReader, pattern: (corner: string) => string[]): Quad | null 
   return out as Quad
 }
 
+const scaled = (q: Quad | null, k: number): Quad | null => (q ? [q[0] * k, q[1] * k, q[2] * k, q[3] * k] : null)
+
+/** Altura del piso adelante y atrás: el promedio de cada eje. */
+function rideHeights(r: RowReader): [number, number] | null {
+  const q = quad(r, (c) => [`${c}rideHeight`])
+  return q ? [(q[0] + q[1]) / 2, (q[2] + q[3]) / 2] : null
+}
+
 const positive = (x: number | null): number | null => (x !== null && x > 0 ? x : null)
 const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x))
 
@@ -220,5 +228,9 @@ export function irSample(r: RowReader, ctx: IrContext): RawSample {
     clockS: r.num('SessionTime') ?? 0,
     // PlayerTrackSurface: -1 fuera del mundo · 0 fuera de pista · 1 box · 2 entrando a boxes · 3 en pista
     offTrack: r.num('PlayerTrackSurface') === 0,
+    wheelKmh: scaled(quad(r, (c) => [`${c}speed`]), 3.6),
+    suspM: quad(r, (c) => [`${c}shockDefl`]),
+    rideHeightM: rideHeights(r),
+    absActive: r.has('BrakeABSactive') ? (r.num('BrakeABSactive') ?? 0) > 0 : null,
   }
 }

@@ -13,7 +13,7 @@ import { acSections, findAcRoot } from './track-map/ac'
 
 const init = workerData as AnalysisInit
 const library = new Library(init.cacheFile)
-const maps = new TrackMaps(init.geoDir)
+const maps = new TrackMaps(init.geoDir, init.stagesDir)
 const prepared = new Map<string, Prepared>()
 let scanning = false
 let scanError: string | null = null
@@ -68,7 +68,7 @@ async function handle(req: AnalysisRequest): Promise<unknown> {
     case 'compare':
       return compareLaps(await prepare(req.sessionId), req.a, req.b)
     case 'coachData':
-      return coachData(await prepare(req.sessionId), req.lap)
+      return coachData(await prepare(req.sessionId))
     case 'tips': {
       // La sesión más nueva de este trazado y auto con vueltas para comparar
       const src = library.sessions.find((x) => isLocal(x) && x.trackId === req.trackId && x.car === req.car && x.validLaps >= 3)

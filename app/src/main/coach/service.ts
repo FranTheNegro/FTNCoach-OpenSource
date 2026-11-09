@@ -10,15 +10,14 @@ import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileS
 import { join } from 'node:path'
 import { COACH_PROVIDERS, type ChatMessage, type CoachFollowUp, type CoachKeyId, type CoachProvider, type CoachReport, type CoachState } from '@shared/analysis'
 import { streamLlm, stripThinking } from './llm'
-import { buildMemory, type CoachMemory, type MemorySources } from './memory'
-import { PERSONA, REPORT_FORMAT, chatSystem, parseReport, reportRequest } from './prompt'
+import type { CoachStyle } from '@shared/coach-quiz'
+import { buildMemory, cornerOfTitle, cornersOf, type CoachMemory, type MemorySources } from './memory'
+import { REPORT_FORMAT, chatSystem, parseReport, persona, reportRequest } from './prompt'
 
 interface Saved {
   report: CoachReport | null
   model: string | null
   createdAt: number | null
-  /** Vuelta analizada (índice) del reporte. */
-  lap: number | null
   chat: ChatMessage[]
   /** Lo que recordó de sesiones anteriores al armar el reporte (no está en reportes viejos). */
   memory?: Record<string, unknown> | null
@@ -33,6 +32,18 @@ function atomicWrite(file: string, data: string | Buffer): void {
   renameSync(tmp, file)
 }
 
+/** La ganancia y la curva de cada corrección las pone la app desde la telemetría, no las escribe la IA. */
+function withMeasured(report: CoachReport, data: Record<string, unknown>): CoachReport {
+  const corners = cornersOf(data)
+  return {
+    ...report,
+    corrections: report.corrections.map((c) => {
+      const corner = cornerOfTitle(c.title, corners)
+      return { ...c, gainS: corner?.repeatable_gain_s ?? 0, cornerId: corner?.corner_id ?? null }
+    }),
+  }
+}
+
 const withMemory = (data: Record<string, unknown>, memory: Record<string, unknown> | null | undefined) => (memory ? { ...data, coach_memory: memory } : data)
 
 export class CoachService extends EventEmitter<{ state: [CoachState] }> {
@@ -41,7 +52,8 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
 
   constructor(
     private choice: () => { provider: CoachProvider; model: string },
-    private sessionData: (id: string, lap: number | null) => Promise<Record<string, unknown>>,
+    private style: () => CoachStyle,
+    private sessionData: (id: string) => Promise<Record<string, unknown>>,
     private memorySources: Omit<MemorySources, 'report'>,
   ) {
     super()
@@ -87,7 +99,7 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
     try {
       return JSON.parse(readFileSync(this.file(id), 'utf8')) as Saved
     } catch {
-      return { report: null, model: null, createdAt: null, lap: null, chat: [] }
+      return { report: null, model: null, createdAt: null, chat: [] }
     }
   }
 
@@ -140,18 +152,18 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
     }
   }
 
-  /** Reporte completo de la sesión (o de una vuelta puntual). */
-  analyze(id: string, lap: number | null): Promise<CoachState> {
+  /** Reporte de la sesión completa. */
+  analyze(id: string): Promise<CoachState> {
     return this.run(id, async () => {
       const llm = this.llm()
-      const data = await this.sessionData(id, lap)
+      const data = await this.sessionData(id)
       this.set(id, { streaming: 'Revisando tus sesiones anteriores…' })
       const { memory, followUp } = await this.recall(id, data)
       let shown = 0
       const text = await streamLlm({
         ...llm,
         conversation: id,
-        system: [PERSONA, REPORT_FORMAT],
+        system: [persona(this.style()), REPORT_FORMAT],
         messages: [{ role: 'user', content: reportRequest(withMemory(data, memory)) }],
         maxTokens: 8000,
         json: true,
@@ -164,9 +176,9 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
           }
         },
       })
-      const report = parseReport(text)
+      const report = withMeasured(parseReport(text), data)
       const saved = this.load(id)
-      this.save(id, { ...saved, report, model: llm.label, createdAt: Date.now(), lap, memory, followUp })
+      this.save(id, { ...saved, report, model: llm.label, createdAt: Date.now(), memory, followUp })
     })
   }
 
@@ -180,7 +192,7 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
       const chat: ChatMessage[] = [...saved.chat, { role: 'user', text: q, at: Date.now() }]
       this.save(id, { ...saved, chat })
       this.emit('state', this.state(id))
-      const data = await this.sessionData(id, saved.lap)
+      const data = await this.sessionData(id)
       // La API pide que la conversación empiece con el piloto
       const history = chat.slice(-MAX_CHAT_TURNS * 2)
       while (history[0]?.role === 'assistant') history.shift()
@@ -188,7 +200,7 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
       const answer = await streamLlm({
         ...llm,
         conversation: id,
-        system: [PERSONA, chatSystem(withMemory(data, saved.memory), saved.report)],
+        system: [persona(this.style()), chatSystem(withMemory(data, saved.memory), saved.report)],
         messages: history.map((m) => ({ role: m.role, content: m.text })),
         maxTokens: 1500,
         onText: (t) => {

@@ -54,7 +54,7 @@ describe.skipIf(!ibt)('análisis de una sesión real', () => {
     expect(cmp.insights.length).toBeGreaterThan(0)
     if (sm.mapper) expect(cmp.a.x!.filter(Number.isFinite).length).toBeGreaterThan(100)
 
-    const data = coachData(p, slow.index) as { corners: unknown[]; best_lap_s: number }
+    const data = coachData(p) as { corners: unknown[]; best_lap_s: number }
     expect(data.best_lap_s).toBeCloseTo(61.688, 3)
     expect(data.corners.length).toBe(d.corners.length)
 

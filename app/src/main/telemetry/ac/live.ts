@@ -155,6 +155,17 @@ export class AcLive implements TelemetrySource {
     }
   }
 
+  /** Velocidad de cada rueda: lo que gira por su radio (null si el juego no publica el radio). */
+  private wheelKmh(): Quad | null {
+    const out: number[] = []
+    for (let i = 0; i < 4; i++) {
+      const radius = f32(this.stat, STATIC.tyreRadius, i)
+      if (!(radius > 0)) return null
+      out.push(Math.abs(f32(this.phys, PHYSICS.wheelAngularSpeed, i)) * radius * 3.6)
+    }
+    return out as Quad
+  }
+
   poll(): RawSample | null {
     this.graphics.read(0, GRAPHICS.size, this.gfx)
     const status = i32(this.gfx, GRAPHICS.status)
@@ -235,6 +246,9 @@ export class AcLive implements TelemetrySource {
       clockS: this.clockS,
       // Más de dos ruedas afuera = corte (mismo criterio que la validación de AC)
       offTrack: i32(b, PHYSICS.numberOfTyresOut) > 2,
+      wheelKmh: this.wheelKmh(),
+      suspM: quad(b, PHYSICS.suspensionTravel),
+      rideHeightM: [f32(b, PHYSICS.rideHeight, 0), f32(b, PHYSICS.rideHeight, 1)],
     }
   }
 

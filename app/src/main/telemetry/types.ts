@@ -1,4 +1,4 @@
-import type { LiveFrame, SessionMeta, SimId } from '@shared/live'
+import type { LiveFrame, Quad, SessionMeta, SimId } from '@shared/live'
 
 /**
  * Muestra que entrega cada fuente, antes de lo que agrega el motor
@@ -11,6 +11,15 @@ export interface RawSample extends Omit<LiveFrame, 'seq' | 'deltaS' | 'fuelPerLa
   simDeltaS: number | null
   /** Las cuatro ruedas fuera de pista (o corte, según el sim). */
   offTrack: boolean
+  // Solo para la grabación y el análisis: no viajan a los dashboards
+  /** Velocidad de cada rueda (km/h), si el sim la publica. */
+  wheelKmh?: Quad | null
+  /** Recorrido de la suspensión de cada rueda (m). */
+  suspM?: Quad | null
+  /** Altura del piso adelante y atrás (m). */
+  rideHeightM?: [number, number] | null
+  /** El ABS está actuando. */
+  absActive?: boolean | null
 }
 
 export interface TelemetrySource {

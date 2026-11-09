@@ -14,14 +14,11 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { StageLayer, StageMapData, StagePoint, StageStats, StageSurface, StageTile } from '@shared/stage'
+import { STAGE_TILE_PX, STAGE_TILE_SIZES, type StageLayer, type StageMapData, type StagePoint, type StageStats, type StageSurface } from '@shared/stage'
 import { loadStage, saveStage, stageLength, type StageFile } from '../telemetry/acr/stage-store'
 import { fromL93, inFrance, toL93 } from './l93'
 
 const UA = 'FTNCoach/0.3 (telemetria de simracing)'
-const TILE_M = 500
-const TILE_PX = 1024
-const TILE_MARGIN_M = 300
 /** Error medio máximo (m) para aceptar un registro contra las calles de OSM. */
 const MAX_FIT_ERROR_M = 4
 
@@ -400,24 +397,6 @@ function statsOf(line: StagePoint[]): StageStats | null {
   }
 }
 
-function tilesOf(line: StagePoint[], oE: number, oN: number): StageTile[] {
-  const keys = new Set<string>()
-  for (let i = 0; i < line.length; i += 5) {
-    const e = line[i].z + oE
-    const n = line[i].x + oN
-    for (const de of [-TILE_MARGIN_M, 0, TILE_MARGIN_M])
-      for (const dn of [-TILE_MARGIN_M, 0, TILE_MARGIN_M]) keys.add(`${Math.floor((e + de) / TILE_M) * TILE_M},${Math.floor((n + dn) / TILE_M) * TILE_M}`)
-  }
-  const out: StageTile[] = []
-  for (const layer of Object.keys(LAYERS) as StageLayer[]) {
-    for (const k of keys) {
-      const [e, n] = k.split(',').map(Number)
-      out.push({ layer, z0: e - oE, x0: n - oN, z1: e + TILE_M - oE, x1: n + TILE_M - oN, url: `/api/stage-tile?${new URLSearchParams({ layer, e: String(e), n: String(n) })}` })
-    }
-  }
-  return out
-}
-
 // ── API ────────────────────────────────────────────────────────────────────
 
 export class StageMaps {
@@ -453,7 +432,6 @@ export class StageMaps {
       splitsSource: file?.splitsSource ?? null,
       stats: null,
       geo: null,
-      tiles: [],
       surfaces: [],
       credits: [],
       note,
@@ -486,7 +464,6 @@ export class StageMaps {
       splitsSource: file.splitsSource,
       stats: statsOf(line),
       geo,
-      tiles: geo ? tilesOf(line, geo.offsetE, geo.offsetN) : [],
       surfaces: file.surfaces ?? [],
       credits: geo ? STAGE_CREDITS : [],
       note: geo
@@ -495,12 +472,17 @@ export class StageMaps {
     }
   }
 
-  /** Tesela del IGN (500 m en Lambert-93), guardada en disco la primera vez. */
-  async tile(layer: string, e: number, n: number): Promise<{ body: Buffer; mime: string }> {
+  /**
+   * Tesela del IGN en Lambert-93 (lado `size` m: 500 de cerca, más grande para ver de
+   * lejos), guardada en disco la primera vez.
+   */
+  async tile(layer: string, e: number, n: number, size = 500): Promise<{ body: Buffer; mime: string }> {
     const spec = LAYERS[layer as StageLayer]
-    if (!spec || !Number.isFinite(e) || !Number.isFinite(n) || e % TILE_M || n % TILE_M) throw new Error('Tesela inválida')
+    const okSize = (STAGE_TILE_SIZES as readonly number[]).includes(size)
+    if (!spec || !okSize || !Number.isFinite(e) || !Number.isFinite(n) || e % size || n % size) throw new Error('Tesela inválida')
     const ext = spec.format === 'image/jpeg' ? 'jpg' : 'png'
-    const dir = join(this.tilesDir, layer)
+    // Las de 500 m quedan donde estaban; las otras, cada tamaño en su carpeta
+    const dir = size === 500 ? join(this.tilesDir, layer) : join(this.tilesDir, layer, String(size))
     const file = join(dir, `${e}_${n}.${ext}`)
     if (existsSync(file)) return { body: readFileSync(file), mime: spec.format }
     const q = new URLSearchParams({
@@ -510,9 +492,9 @@ export class StageMaps {
       LAYERS: spec.wms,
       STYLES: '',
       CRS: 'EPSG:2154',
-      BBOX: `${e},${n},${e + TILE_M},${n + TILE_M}`,
-      WIDTH: String(TILE_PX),
-      HEIGHT: String(TILE_PX),
+      BBOX: `${e},${n},${e + size},${n + size}`,
+      WIDTH: String(STAGE_TILE_PX),
+      HEIGHT: String(STAGE_TILE_PX),
       FORMAT: spec.format,
       TRANSPARENT: 'true',
     })

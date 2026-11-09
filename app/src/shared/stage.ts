@@ -48,14 +48,21 @@ export interface StagePoint {
 
 export type StageLayer = 'orto' | 'relieve' | 'curvas'
 
-export interface StageTile {
-  layer: StageLayer
-  /** Rectángulo en coordenadas del juego (z = este, x = norte). */
-  z0: number
-  x0: number
-  z1: number
-  x1: number
-  url: string
+/** Lado de las teselas (m): 500 para ver de cerca, las más grandes para ver de lejos. */
+export const STAGE_TILE_SIZES = [500, 2000, 8000] as const
+/** Ancho de cada tesela en píxeles. */
+export const STAGE_TILE_PX = 1024
+
+export type StageNoteKind = 'peligro' | 'consejo' | 'nota'
+
+/** Nota que el piloto deja en un punto del tramo. */
+export interface StageNote {
+  id: string
+  /** Metro del tramo (desde la largada). */
+  distM: number
+  kind: StageNoteKind
+  text: string
+  createdAt: string
 }
 
 export interface StageSurface {
@@ -89,7 +96,6 @@ export interface StageMapData {
   stats: StageStats | null
   /** Registro a la cartografía: coordenadas del juego + corrimiento = Lambert-93. */
   geo: { crs: 'EPSG:2154'; offsetE: number; offsetN: number; errorM: number } | null
-  tiles: StageTile[]
   surfaces: StageSurface[]
   credits: string[]
   note: string

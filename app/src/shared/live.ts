@@ -101,6 +101,8 @@ export interface LiveFrame {
    * null si el sim no la publica en vivo (iRacing: el mapa la ubica con lapPct).
    */
   pos: [number, number] | null
+  /** Hacia dónde apunta el auto (grados de brújula: 0 = norte, 90 = este). Por ahora solo rally. */
+  headingDeg?: number | null
   /** Posición en la vuelta 0..1. */
   lapPct: number
   /** Tiempo de la vuelta en curso (s). */
@@ -170,6 +172,8 @@ export interface SessionMeta {
   pitLimitKmh?: number | null
   /** Categoría del auto (para el layout automático del dashboard). */
   category?: CarCategory | null
+  /** Rally: dónde están los parciales del tramo (m desde la largada). */
+  stageSplitsM?: number[] | null
 }
 
 export type LapKind = 'valid' | 'out_lap' | 'in_lap' | 'off_track' | 'incident' | 'partial'

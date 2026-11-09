@@ -20,6 +20,7 @@ import { SharedMemory, isProcessRunning } from '../win32'
 import type { RawSample, TelemetrySource } from '../types'
 import { f32, i32, wstr, type Field } from '../ac/structs'
 import { GRAPHICS, PHYSICS, STATIC } from './structs'
+import { HeadingCalibrator } from './heading'
 import { StageRun, loadStage, newStage, saveStage, stageId, stageLength, type StageFile } from './stage-store'
 
 const PSI_TO_KPA = 6.894757
@@ -71,6 +72,7 @@ export class AcrLive implements TelemetrySource {
   private file: StageFile | null = null
   private fileKey = ''
   private run: StageRun | null = null
+  private heading = new HeadingCalibrator()
   private car = ''
 
   private constructor(
@@ -130,6 +132,7 @@ export class AcrLive implements TelemetrySource {
       trackSlug: track || null,
       trackLengthM: length,
       sectorsPct: null,
+      stageSplitsM: this.file?.splitsM ?? null,
       driver: driver || null,
       sessionType: 'Tramo',
       // ACR no publica las luces de cambio: se aproximan con el corte, como en AC
@@ -288,6 +291,7 @@ export class AcrLive implements TelemetrySource {
       lap: Math.max(1, this.stage),
       // Coordenadas del mundo en metros, y hacia arriba: el plano es x, z como en AC
       pos: [pos[0], pos[2]],
+      headingDeg: this.heading.update(pos[0], pos[2], f32(b, PHYSICS.heading), f32(b, PHYSICS.speedKmh), f32(b, PHYSICS.steerAngle)),
       lapPct: Math.max(0, Math.min(1, progress)),
       lapTimeS: stageS,
       lastLapS: this.lastStageS,
@@ -321,6 +325,7 @@ export class AcrLive implements TelemetrySource {
       clockS: this.clockS,
       // numberOfTyresOut queda en cero en ACR; las reubicaciones se cuentan en stage.resets
       offTrack: false,
+      suspM: quad(b, PHYSICS.suspensionTravel),
     }
   }
 

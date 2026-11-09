@@ -6,6 +6,7 @@ import { app } from 'electron'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { COACH_PROVIDERS } from '@shared/analysis'
+import { defaultCoachStyle } from '@shared/coach-quiz'
 import type { DeepPartial, Settings } from '@shared/api'
 
 function defaults(): Settings {
@@ -17,11 +18,12 @@ function defaults(): Settings {
       iracingTelemetry: join(app.getPath('documents'), 'iRacing', 'telemetry'),
       recordings: join(app.getPath('documents'), 'FTN Coach', 'Sesiones'),
     },
-    recording: { ac: true, iracing: false },
+    recording: { ac: true, acr: true, iracing: false },
     coach: {
       provider: 'gemini',
       models: Object.fromEntries(COACH_PROVIDERS.map((p) => [p.id, p.defaultModel])) as Settings['coach']['models'],
     },
+    coachStyle: defaultCoachStyle(),
     profile: { name: '', experienceYears: 0, discipline: '', about: '', goals: '' },
   }
 }

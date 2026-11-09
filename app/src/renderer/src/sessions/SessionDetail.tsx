@@ -25,7 +25,7 @@ type Tab = 'analysis' | 'corners' | 'laps' | 'gg' | 'video' | 'setup' | 'coach'
 /** Contra qué se compara la vuelta analizada. */
 type Ref = { kind: 'lap'; index: number }
 
-const SIM = { iracing: 'iRacing', ac: 'Assetto Corsa' } as const
+const SIM = { iracing: 'iRacing', ac: 'Assetto Corsa', acr: 'Assetto Corsa Rally' } as const
 const C = {
   a: 'var(--ftn-azul)',
   b: 'var(--ftn-mejor)',
@@ -488,7 +488,7 @@ export function SessionDetailView({
           <SetupView setup={d.setup} />
         </div>
       )}
-      {tab === 'coach' && <CoachPanel sessionId={summary.id} lap={lapA} lapLabel={A ? `V${A.lap}` : ''} />}
+      {tab === 'coach' && <CoachPanel d={d} onZoom={zoomCorner} />}
           </div>
         </div>
       )}

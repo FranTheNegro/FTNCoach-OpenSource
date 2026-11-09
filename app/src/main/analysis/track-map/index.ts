@@ -4,6 +4,7 @@
  */
 import { join } from 'node:path'
 import type { Point, TrackMapResult } from '@shared/analysis'
+import { loadStage, type StageFile } from '../../telemetry/acr/stage-store'
 import type { LoadedSession } from '../session'
 import { acGeometry, findAcRoot } from './ac'
 import {
@@ -134,13 +135,47 @@ function localGps(s: LoadedSession): Mapper | null {
   return (lat, lon) => gpsToScreen(origin, lat, lon)
 }
 
+const STAGE_LINE_POINTS = 800
+
+/** Tramo de rally: la línea del camino aprendida en la mejor pasada, repartida por distancia. */
+function stageGeometry(stage: StageFile): TrackMapResult {
+  const line = stage.line
+  if (line.length < 2) return { map: null, note: 'Todavía no hay una pasada completa de este tramo para dibujarlo.' }
+  const total = line[line.length - 1][0] || 1
+  const pctLine: Point[] = []
+  let j = 0
+  for (let k = 0; k <= STAGE_LINE_POINTS; k++) {
+    const d = (k / STAGE_LINE_POINTS) * total
+    while (j < line.length - 1 && line[j + 1][0] < d) j++
+    pctLine.push([line[j][3], -line[j][1]])
+  }
+  const xs = pctLine.map((p) => p[0])
+  const ys = pctLine.map((p) => p[1])
+  return {
+    map: {
+      source: 'acr',
+      asphalt: [],
+      startFinish: [],
+      labels: [],
+      widthM: null,
+      widthNote: '',
+      pctLine,
+      bounds: { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) },
+    },
+    note: 'La línea del tramo sale de tu pasada; el mapa con cartografía está en el dashboard.',
+  }
+}
+
 export class TrackMaps {
   private memo = new Map<string, TrackMapResult>()
   /** Sesiones con las que ya se intentó registrar (registrar tarda: no se repite al reabrir). */
   private tried = new Set<string>()
   private acRoot: string | null | undefined
 
-  constructor(private dir: string) {}
+  constructor(
+    private dir: string,
+    private stagesDir: string | null = null,
+  ) {}
 
   private ac(): string | null {
     if (this.acRoot === undefined) this.acRoot = findAcRoot()
@@ -154,6 +189,13 @@ export class TrackMaps {
   /** Mapa del trazado + cómo ubicar la trazada de esta sesión. */
   async forSession(s: LoadedSession): Promise<SessionMap> {
     const trackId = s.summary.trackId
+    if (s.summary.sim === 'acr') {
+      // Norte arriba: como en el mapa del tramo del dashboard
+      const mapper: Mapper | null = s.posKind === 'world' ? (x, z) => [z, -x] : null
+      const stage = trackId && this.stagesDir ? loadStage(this.stagesDir, trackId.replace(/^acr\//, '')) : null
+      const result = stage ? stageGeometry(stage) : { map: null, note: 'Todavía no hay una pasada completa de este tramo para dibujarlo.' }
+      return { result: mapper ? result : { ...result, note: NO_POSITION }, mapper }
+    }
     if (s.summary.sim === 'ac') {
       const result = trackId ? this.acMap(trackId) : { map: null, note: 'Sin datos del trazado.' }
       const mapper: Mapper | null = s.posKind === 'world' ? (x, z) => [x, z] : null

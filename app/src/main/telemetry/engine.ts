@@ -150,7 +150,7 @@ export class TelemetryEngine extends EventEmitter<EngineEvents> {
     if (this.tracker.update(s)) this.emit('laps', this.tracker.laps)
 
     const fuelPerLap = this.tracker.fuelPerLap()
-    const { clockS: _c, simDeltaS, offTrack: _o, ...rest } = s
+    const { clockS: _c, simDeltaS, offTrack: _o, wheelKmh: _w, suspM: _s, rideHeightM: _r, absActive: _a, ...rest } = s
     this.frame = {
       ...rest,
       seq: ++this.seq,

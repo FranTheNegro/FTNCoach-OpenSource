@@ -2,7 +2,7 @@
  * Análisis de sesiones grabadas: biblioteca, vueltas, sectores, curvas y mapa.
  * Lo calcula el hilo de análisis (proceso principal) y lo muestra la app.
  */
-import type { LapKind } from './live'
+import type { LapKind, Quad, Triple } from './live'
 
 /** ibt: telemetría de iRacing; rec: grabación propia de FTN Coach. */
 export type SessionSource = 'ibt' | 'rec'
@@ -17,7 +17,7 @@ export interface SessionSummary {
   id: string
   path: string
   source: SessionSource
-  sim: 'iracing' | 'ac'
+  sim: 'iracing' | 'ac' | 'acr'
   car: string
   /** iRacing: "iracing/{CarID}" (sesiones viejas en caché pueden no tenerlo). */
   carId?: string | null
@@ -50,6 +50,18 @@ export interface SessionSectors {
   bestS: (number | null)[]
 }
 
+/** Cómo estuvo el auto en una vuelta, según lo que publica cada sim. */
+export interface LapCar {
+  /** Promedio de la vuelta, por rueda. */
+  tyreC: Quad | null
+  tyreZonesC: [Triple, Triple, Triple, Triple] | null
+  tyreKpa: Quad | null
+  /** Desgaste restante al final de la vuelta (0..1). */
+  tyreWear: Quad | null
+  /** Temperatura máxima de cada freno. */
+  brakePeakC: Quad | null
+}
+
 export interface LapInfo {
   /** Índice dentro de la sesión (0..n-1); `lap` es el número que da el sim. */
   index: number
@@ -69,6 +81,7 @@ export interface LapInfo {
   complete: boolean
   /** Sesión del evento en la que se dio (cuando el archivo trae más de una). */
   session: string | null
+  car?: LapCar | null
 }
 
 export interface Corner {
@@ -97,6 +110,18 @@ export interface CornerPass {
   minM: number
   /** Donde empieza a doblar (el volante pasa un tercio del máximo de la curva). */
   turnInM?: number | null
+  /** Marcha en el punto más lento. */
+  gear?: number | null
+  /** Presión máxima de freno (0..1), null si pasó sin frenar. */
+  brakePeak?: number | null
+  /** Segundos sin freno ni acelerador entre la frenada y el fondo. */
+  coastS?: number | null
+  /** Todavía frena cuando empieza a doblar. */
+  trailBraking?: boolean | null
+  /** Segundos con una rueda bloqueada en la frenada (null si el sim no publica las ruedas). */
+  lockupS?: number | null
+  /** Segundos patinando al salir (null si el sim no publica las ruedas). */
+  spinS?: number | null
   offTrack: boolean
 }
 
@@ -116,8 +141,8 @@ export type Point = [number, number]
  * pantalla). Nunca sale de la telemetría del piloto.
  */
 export interface TrackGeometry {
-  /** iracing: dibujo oficial registrado al GPS. ac: líneas y bordes del propio juego. */
-  source: 'iracing' | 'ac'
+  /** iracing: dibujo oficial registrado al GPS. ac: líneas y bordes del propio juego. acr: la línea del tramo. */
+  source: 'iracing' | 'ac' | 'acr'
   /** Contornos del asfalto (relleno nonzero). */
   asphalt: Point[][]
   /** Formas de la línea de largada (dibujo oficial) o el segmento que la marca. */
@@ -249,11 +274,36 @@ export interface LibraryState {
 
 // ── Coach ──────────────────────────────────────────────────────────────────
 
+export interface CoachCorrection {
+  rank: number
+  /** "T7 · FRENADA": la memoria y el ícono de la fase salen de acá. */
+  title: string
+  /** Cómo reconocer el lugar en la pista (no está en reportes viejos). */
+  where?: string
+  /** Lo que hace en una vuelta normal. */
+  current: string
+  target: string
+  /** Cuántas vueltas lo muestran ("en 9 de 12 vueltas limpias"). */
+  evidence?: string
+  /** Lo que tiene que hacer. */
+  solution: string
+  /** Cómo se da cuenta de que le salió. */
+  feel?: string
+  /** Lo mide la app: una vuelta normal contra su mejor pasada por esa curva. */
+  gainS: number
+  /** Curva en la telemetría, para mostrarla en el mapa. */
+  cornerId?: number | null
+}
+
 export interface CoachReport {
+  /** La idea principal de la sesión en una frase (no está en reportes viejos). */
+  headline?: string
   briefing: string
+  /** Lo que ya hace bien, con lo que lo demuestra (no está en reportes viejos). */
+  wins?: string[]
   corners: { corner: string; trackPct: number; speeds: string; diagnosis: string; lossS: number }[]
   dynamics: { braking: string; throttle: string; frictionCircle: string }
-  corrections: { rank: number; title: string; current: string; target: string; gainS: number; solution: string }[]
+  corrections: CoachCorrection[]
   drill: { description: string; kpi: string }
   /** Qué pasó con lo que pidió en sesiones anteriores (vacío o ausente si no hay). */
   followUp?: string

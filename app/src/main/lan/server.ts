@@ -1,7 +1,9 @@
 /**
  * Servidor de la red local: sirve el dashboard (HTML estático) y publica la
  * telemetría por WebSocket en /ws. Es de solo lectura: ningún cliente de la red
- * puede cambiar nada de la app.
+ * puede cambiar nada de la app. La única excepción son las notas de los tramos de
+ * rally, que el piloto escribe desde la tablet (solo JSON chico, así un sitio de
+ * otro origen no puede mandarlas sin el permiso CORS que este servidor no da).
  *
  * Con la red desactivada escucha solo en 127.0.0.1 (lo usa la vista previa de
  * la app de escritorio).
@@ -13,7 +15,7 @@ import { extname, join, normalize, sep } from 'node:path'
 import { WebSocketServer, type WebSocket } from 'ws'
 import { PROTOCOL_VERSION, type EngineStatus, type LapRecord, type LiveFrame, type ServerMessage, type SessionMeta } from '@shared/live'
 import type { TrackMapResult } from '@shared/analysis'
-import type { StageMapData } from '@shared/stage'
+import type { StageMapData, StageNote } from '@shared/stage'
 import type { TelemetryEngine } from '../telemetry/engine'
 
 /** Datos de solo lectura que el servidor pide a la app (mapa del trazado, app de AC). */
@@ -22,7 +24,13 @@ export interface LanApi {
   ingame(): Promise<unknown>
   /** Rally (ACR): mapa del tramo y las teselas de la cartografía. */
   stageMap(id: string): Promise<StageMapData>
-  stageTile(layer: string, e: number, n: number): Promise<{ body: Buffer; mime: string }>
+  stageTile(layer: string, e: number, n: number, size: number): Promise<{ body: Buffer; mime: string }>
+  /** Notas del piloto en el tramo (lo único que se puede escribir desde la red). */
+  stageNotes: {
+    list(stageId: string): StageNote[]
+    add(stageId: string, note: { distM: unknown; kind: unknown; text: unknown }): StageNote[]
+    remove(stageId: string, noteId: string): StageNote[]
+  }
 }
 
 const MIME: Record<string, string> = {
@@ -231,6 +239,7 @@ export class LanServer {
 
   private handle(req: IncomingMessage, res: ServerResponse): void {
     const o = this.opts!
+    if (req.url?.startsWith('/api/stage-notes')) return this.stageNotes(req, res)
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405).end()
       return
@@ -263,7 +272,7 @@ export class LanServer {
     if (path === '/api/stage-tile') {
       const q = url.searchParams
       this.api
-        .stageTile(q.get('layer') ?? '', Number(q.get('e')), Number(q.get('n')))
+        .stageTile(q.get('layer') ?? '', Number(q.get('e')), Number(q.get('n')), Number(q.get('size') ?? 500))
         .then(({ body, mime }) => {
           res.writeHead(200, { 'content-type': mime, 'cache-control': 'public, max-age=31536000, immutable' })
           res.end(req.method === 'HEAD' ? undefined : body)
@@ -293,6 +302,38 @@ export class LanServer {
     })
     if (req.method === 'HEAD') return void res.end()
     createReadStream(file).pipe(res)
+  }
+
+  /** Notas de un tramo: GET las lista, POST agrega una (JSON), DELETE borra una. */
+  private stageNotes(req: IncomingMessage, res: ServerResponse): void {
+    const url = new URL(req.url ?? '/', 'http://x')
+    const stageId = url.searchParams.get('id') ?? ''
+    const json = (status: number, body: unknown) => {
+      res.writeHead(status, { 'content-type': MIME['.json'], 'cache-control': 'no-store' })
+      res.end(JSON.stringify(body))
+    }
+    const notes = this.api.stageNotes
+    try {
+      if (req.method === 'GET') return json(200, notes.list(stageId))
+      if (req.method === 'DELETE') return json(200, notes.remove(stageId, url.searchParams.get('note') ?? ''))
+      if (req.method !== 'POST') return json(405, { error: 'Método no permitido' })
+    } catch (err) {
+      return json(400, { error: String((err as Error)?.message ?? err) })
+    }
+    if (!(req.headers['content-type'] ?? '').startsWith('application/json')) return json(415, { error: 'Se espera JSON' })
+    let body = ''
+    req.setEncoding('utf8')
+    req.on('data', (chunk: string) => {
+      body += chunk
+      if (body.length > 2048) req.destroy()
+    })
+    req.on('end', () => {
+      try {
+        json(200, notes.add(stageId, JSON.parse(body)))
+      } catch (err) {
+        json(400, { error: String((err as Error)?.message ?? err) })
+      }
+    })
   }
 
   /** Desarrollo: reenvía la página al servidor de Vite (para usar la tablet con hot reload). */

@@ -15,6 +15,7 @@ import { claudeCodeVersion } from './coach/claude-code'
 import { acAppStatus, installAcApp } from './ac-app'
 import { LanServer } from './lan/server'
 import { StageMaps } from './acr/stage-map'
+import { StageNotes } from './acr/stage-notes'
 import { SettingsStore } from './settings'
 import { StyleStore } from './style'
 import { VIDEO_EXTS, VideoStore, registerVideoScheme } from './video'
@@ -48,8 +49,9 @@ const coach = new CoachService(
     const c = settings.get().coach
     return { provider: c.provider, model: c.models[c.provider] }
   },
-  async (id, lap) => {
-    const data = await analysis.request({ type: 'coachData', sessionId: id, lap })
+  () => settings.get().coachStyle,
+  async (id) => {
+    const data = await analysis.request({ type: 'coachData', sessionId: id })
     // Contexto real del piloto: su perfil y su historial en este auto y pista
     const p = settings.get().profile
     const profile = {
@@ -86,12 +88,19 @@ const coach = new CoachService(
 const acrStagesDir = () => join(app.getPath('userData'), 'acr', 'stages')
 let stageMaps: StageMaps | null = null
 const stageMapsOf = () => (stageMaps ??= new StageMaps(acrStagesDir(), join(app.getPath('userData'), 'acr', 'tiles')))
+let stageNotes: StageNotes | null = null
+const stageNotesOf = () => (stageNotes ??= new StageNotes(join(app.getPath('userData'), 'acr', 'notes')))
 
 const lan = new LanServer(engine, {
   trackMap: (trackId, slug) => analysis.request({ type: 'liveMap', trackId, slug }),
   ingame: () => ingameState(),
   stageMap: (id) => stageMapsOf().get(id),
-  stageTile: (layer, e, n) => stageMapsOf().tile(layer, e, n),
+  stageTile: (layer, e, n, size) => stageMapsOf().tile(layer, e, n, size),
+  stageNotes: {
+    list: (id) => stageNotesOf().list(id),
+    add: (id, note) => stageNotesOf().add(id, note),
+    remove: (id, noteId) => stageNotesOf().remove(id, noteId),
+  },
 })
 let finishingRecording = false
 
@@ -328,7 +337,7 @@ function registerIpc(): void {
   ipcMain.handle('track:map', (_e, trackId: string, slug: string | null) => analysis.request({ type: 'liveMap', trackId, slug }))
 
   ipcMain.handle('coach:state', (_e, id: string) => coach.state(id))
-  ipcMain.handle('coach:analyze', (_e, id: string, lap: number | null) => coach.analyze(id, lap))
+  ipcMain.handle('coach:analyze', (_e, id: string) => coach.analyze(id))
   ipcMain.handle('coach:ask', (_e, id: string, q: string) => coach.ask(id, q))
   ipcMain.handle('coach:clear', (_e, id: string) => coach.clearChat(id))
   ipcMain.handle('coach:hasKey', (_e, k: CoachKeyId) => coach.hasKey(k))
@@ -369,7 +378,7 @@ function registerIpc(): void {
   engine.on('sample', (smp) => {
     if (finishingRecording) return
     const rec = settings.get().recording
-    if ((smp.sim === 'ac' && rec.ac) || (smp.sim === 'iracing' && rec.iracing)) recorder.sample(smp, engine.meta)
+    if ((smp.sim === 'ac' && rec.ac) || (smp.sim === 'acr' && rec.acr) || (smp.sim === 'iracing' && rec.iracing)) recorder.sample(smp, engine.meta)
   })
   engine.on('status', (st) => {
     if (st.state === 'waiting' && recorder.current) void recorder.stop().then(scanLibrary)
@@ -385,7 +394,7 @@ app.whenReady().then(async () => {
   engine.start(() => createReader({ workerData: { stagesDir: acrStagesDir() } }))
   analysis.start(() =>
     createAnalysis({
-      workerData: { cacheFile: join(app.getPath('userData'), 'library.json'), geoDir: join(app.getPath('userData'), 'track_geo') },
+      workerData: { cacheFile: join(app.getPath('userData'), 'library.json'), geoDir: join(app.getPath('userData'), 'track_geo'), stagesDir: acrStagesDir() },
     }),
   )
   scanLibrary()

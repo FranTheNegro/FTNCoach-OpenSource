@@ -4,6 +4,8 @@ import type { CompareResult, LibraryState, SessionDetail, TrackMapResult } from 
 export interface AnalysisInit {
   cacheFile: string
   geoDir: string
+  /** Tramos de rally aprendidos (para dibujar el mapa de la sesión). */
+  stagesDir: string
 }
 
 export type AnalysisRequest =
@@ -11,7 +13,7 @@ export type AnalysisRequest =
   | { type: 'detail'; sessionId: string }
   | { type: 'compare'; sessionId: string; a: number; b: number }
   | { type: 'liveMap'; trackId: string; slug: string | null }
-  | { type: 'coachData'; sessionId: string; lap: number | null }
+  | { type: 'coachData'; sessionId: string }
   | { type: 'tips'; trackId: string; car: string }
 
 export interface AnalysisResults {

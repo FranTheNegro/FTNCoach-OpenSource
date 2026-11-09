@@ -1,5 +1,6 @@
 /** Contrato entre el proceso principal y la app de escritorio (window.ftn). */
 import type { CoachKeyId, CoachProvider, CoachState, CompareResult, DriverStyle, LibraryState, SessionDetail, TrackMapResult } from './analysis'
+import type { CoachStyle } from './coach-quiz'
 import type { EngineStatus, SessionMeta } from './live'
 
 
@@ -43,6 +44,8 @@ export interface Settings {
   recording: {
     /** Grabar las sesiones de AC (no guarda telemetría por su cuenta). */
     ac: boolean
+    /** Grabar las pasadas de rally (ACR tampoco guarda telemetría). */
+    acr: boolean
     /** Grabar también iRacing (normalmente no hace falta: iRacing guarda sus .ibt). */
     iracing: boolean
   }
@@ -51,6 +54,8 @@ export interface Settings {
     /** Modelo elegido para cada proveedor. */
     models: Record<CoachProvider, string>
   }
+  /** Cómo quiere el piloto que le hable su coach: las respuestas del quiz. */
+  coachStyle: CoachStyle
   /** Quién maneja: lo usa el coach como contexto y se muestra en Perfil. */
   profile: {
     name: string
@@ -118,7 +123,8 @@ export interface FtnApi {
   trackMap(trackId: string, slug: string | null): Promise<TrackMapResult>
 
   coachState(id: string): Promise<CoachState>
-  coachAnalyze(id: string, lap: number | null): Promise<CoachState>
+  /** Reporte de la sesión completa. */
+  coachAnalyze(id: string): Promise<CoachState>
   coachAsk(id: string, question: string): Promise<CoachState>
   coachClear(id: string): Promise<CoachState>
   onCoach(cb: (s: CoachState) => void): () => void

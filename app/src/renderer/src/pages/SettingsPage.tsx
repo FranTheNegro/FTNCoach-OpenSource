@@ -312,6 +312,9 @@ export function SettingsPage({ focus }: { focus?: SettingsSection | null }) {
           <Field title="Grabar Assetto Corsa" hint="AC no guarda telemetría: FTN Coach graba cada sesión para analizarla después.">
             <Toggle checked={s.recording.ac} onChange={(v) => void save({ recording: { ac: v } })} label="Grabar Assetto Corsa" />
           </Field>
+          <Field title="Grabar Assetto Corsa Rally" hint="ACR tampoco guarda telemetría: FTN Coach graba cada pasada para analizarla después.">
+            <Toggle checked={s.recording.acr} onChange={(v) => void save({ recording: { acr: v } })} label="Grabar Assetto Corsa Rally" />
+          </Field>
           <Field
             title="Grabar iRacing"
             hint="Normalmente no hace falta: iRacing guarda sus .ibt (con Alt+L). Activalo si no usás la telemetría de iRacing; sin GPS no hay mapa oficial."

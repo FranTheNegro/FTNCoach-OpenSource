@@ -9,11 +9,14 @@ import type {
   Corner,
   CornerPass,
   Insight,
+  LapCar,
   LapInfo,
   LapTrace,
   SessionDetail,
   TrackGeometry,
 } from '@shared/analysis'
+import { SIM_LABEL, type Quad } from '@shared/live'
+import { stintsOf } from '@shared/stints'
 import type { LoadedSession } from './session'
 import { styleSample } from './style'
 import type { SessionMap } from './track-map'
@@ -30,6 +33,8 @@ export interface GridLap {
   gLat: Float32Array
   gLon: Float32Array
   off: Uint8Array
+  /** 1 = rueda bloqueada, 2 = patinando; null si la telemetría no trae las ruedas. */
+  slip: Uint8Array | null
   x: Float32Array | null
   y: Float32Array | null
   complete: boolean
@@ -56,6 +61,8 @@ interface CornerSeg {
 
 const BRAKE_ON = 0.15
 const FULL_THROTTLE = 0.95
+/** Por debajo de esto, el pedal se considera suelto. */
+const COAST_PEDAL = 0.05
 
 // ── Remuestreo ──────────────────────────────────────────────────────────────
 
@@ -113,6 +120,7 @@ export function resampleLap(s: Pick<LoadedSession, 'spans' | 'ch' | 'laps'>, i: 
     gLat: new Float32Array(N + 1),
     gLon: new Float32Array(N + 1),
     off: new Uint8Array(N + 1),
+    slip: ch.slip && ch.slip.some((v) => v > 0) ? new Uint8Array(N + 1) : null,
     x: px ? new Float32Array(N + 1) : null,
     y: py ? new Float32Array(N + 1) : null,
     complete: p[0] <= 0.02 && p[count - 1] >= 0.98,
@@ -143,6 +151,7 @@ export function resampleLap(s: Pick<LoadedSession, 'spans' | 'ch' | 'laps'>, i: 
     out.gLat[g] = lerp(ch.gLat)
     out.gLon[g] = lerp(ch.gLon)
     out.off[g] = ch.off[a] || ch.off[a + 1] ? 1 : 0
+    if (out.slip && ch.slip) out.slip[g] = ch.slip[a] || ch.slip[a + 1]
     if (out.x && out.y && px && py) {
       out.x[g] = px[j] + (px[j + 1] - px[j]) * f
       out.y[g] = py[j] + (py[j + 1] - py[j]) * f
@@ -204,9 +213,11 @@ function detectCorners(ref: GridLap, step: number): number[] {
   const n = v.length
   const margin = Math.round(n * 0.01)
   let found: number[] = []
+  // Un tramo o un circuito muy largo tiene más curvas que uno normal
+  const maxCorners = Math.max(25, Math.round((n * step) / 300))
   for (let prom = 4; prom < 80; prom += 4) {
     found = valleys(v, prom, Math.round(40 / step)).filter((i) => i > margin && i < n - 1 - margin)
-    if (found.length <= 25) break
+    if (found.length <= maxCorners) break
   }
   // Una curva de verdad: se frena antes o hay G lateral en el vértice
   const back = Math.round(300 / step)
@@ -262,6 +273,17 @@ function cornerPass(lap: GridLap, c: CornerSeg, step: number): CornerPass | null
     }
   let off = false
   for (let k = a; k <= b; k++) if (lap.off[k]) off = true
+  let brakePeak = 0
+  if (brakeIdx !== null) for (let k = brakeIdx; k <= minIdx; k++) brakePeak = Math.max(brakePeak, lap.brake[k])
+  let coastS = 0
+  for (let k = brakeIdx ?? a; k < (throttleIdx ?? b); k++)
+    if (lap.brake[k] < COAST_PEDAL && lap.throttle[k] < COAST_PEDAL && Number.isFinite(lap.t[k + 1])) coastS += lap.t[k + 1] - lap.t[k]
+  const slipTime = (from: number, to: number, kind: number) => {
+    if (!lap.slip) return null
+    let s = 0
+    for (let k = from; k < to; k++) if (lap.slip[k] === kind && Number.isFinite(lap.t[k + 1])) s += lap.t[k + 1] - lap.t[k]
+    return s
+  }
   return {
     timeS: lap.t[b] - lap.t[a],
     entryKmh: entry,
@@ -271,6 +293,12 @@ function cornerPass(lap: GridLap, c: CornerSeg, step: number): CornerPass | null
     fullThrottleM: throttleIdx !== null ? throttleIdx * step : null,
     minM: minIdx * step,
     turnInM: turnIdx !== null ? turnIdx * step : null,
+    gear: Number.isFinite(lap.gear[minIdx]) ? lap.gear[minIdx] : null,
+    brakePeak: brakeIdx !== null ? brakePeak : null,
+    coastS,
+    trailBraking: turnIdx !== null ? lap.brake[turnIdx] >= BRAKE_ON : null,
+    lockupS: slipTime(brakeIdx ?? a, minIdx, 1),
+    spinS: slipTime(minIdx, b, 2),
     offTrack: off,
   }
 }
@@ -355,6 +383,7 @@ export function analyzeSession(
       complete: g.complete,
       session: s.lapSessions?.[i] ?? null,
       maxSpeedKmh: vmax,
+      car: s.carLaps?.[i] ?? null,
     }
   })
 
@@ -390,7 +419,9 @@ export function analyzeSession(
       const a = starts[k]
       const b = k + 1 < apexes.length ? starts[k + 1] : N
       segs.push({ a, apex, b, prevApex: k ? apexes[k - 1] : 0 })
-      corners.push({ id: k + 1, label: `T${k + 1}`, name: null, startPct: a / N, apexPct: apex / N, endPct: b / N })
+      // En rally no hay números de curva: se ubican por el kilómetro del tramo
+      const label = s.summary.sim === 'acr' ? `km ${((apex * step) / 1000).toFixed(1).replace('.', ',')}` : `T${k + 1}`
+      corners.push({ id: k + 1, label, name: null, startPct: a / N, apexPct: apex / N, endPct: b / N })
     })
     nameCorners(corners, ref, apexes, sm.result.map, sections)
   }
@@ -535,69 +566,231 @@ function compareGrid(p: Prepared, ia: number, B: GridLap, ib: number, passesB: (
 
 // ── Datos para el coach ─────────────────────────────────────────────────────
 
-/** Resumen compacto y con unidades para el LLM (solo números medidos). */
-export function coachData(p: Prepared, focus: number | null): Record<string, unknown> {
+/** Largo típico de un auto: para contar las distancias de una forma que se pueda imaginar. */
+const CAR_LENGTH_M = 4.5
+/** Diferencias más chicas que esto no se notan al manejar (la grilla ya mide de a ~2 m). */
+const MIN_POINT_DIFF_M = 6
+const MIN_SPEED_DIFF_KMH = 2
+/** Lo mínimo para contar un bloqueo o una patinada (un piano da picos más cortos). */
+const MIN_LOCKUP_S = 0.1
+const MIN_SPIN_S = 0.2
+/** Una vuelta más lenta que esto contra la mejor no cuenta para el ritmo (tráfico, error). */
+const PACE_WINDOW = 1.07
+
+const r = (v: number | null | undefined, k = 1) => (v === null || v === undefined || !Number.isFinite(v) ? null : Math.round(v * 10 ** k) / 10 ** k)
+
+function median(xs: (number | null | undefined)[]): number | null {
+  const a = xs.filter((x): x is number => x !== null && x !== undefined && Number.isFinite(x)).sort((x, y) => x - y)
+  if (!a.length) return null
+  const m = a.length >> 1
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2
+}
+
+/** Una distancia dicha de tres formas: el coach elige según lo que prefiera el piloto. */
+function distanceDiff(diffM: number, speedKmh: number | null) {
+  const m = Math.abs(diffM)
+  return {
+    metres: r(m, 0),
+    car_lengths: r(m / CAR_LENGTH_M, 1),
+    seconds: speedKmh && speedKmh > 1 ? r(m / (speedKmh / 3.6), 2) : null,
+  }
+}
+
+/** Qué hace en una vuelta normal contra su mejor pasada, y en cuántas vueltas se ve. */
+function cornerPattern(clean: CornerPass[], best: CornerPass) {
+  const n = clean.length
+  const count = (f: (p: CornerPass) => boolean) => clean.filter(f).length
+  const pattern: Record<string, unknown> = {}
+
+  const brakeDiff = best.brakeM === null ? null : median(clean.map((p) => (p.brakeM === null ? null : p.brakeM - best.brakeM!)))
+  if (brakeDiff !== null && Math.abs(brakeDiff) >= MIN_POINT_DIFF_M) {
+    const earlier = brakeDiff < 0
+    pattern.braking = {
+      compared_to_best: earlier ? 'earlier' : 'later',
+      ...distanceDiff(brakeDiff, best.entryKmh),
+      laps: count((p) => p.brakeM !== null && (earlier ? best.brakeM! - p.brakeM : p.brakeM - best.brakeM!) >= MIN_POINT_DIFF_M),
+      of_laps: n,
+    }
+  }
+  const minDiff = median(clean.map((p) => p.minKmh - best.minKmh))
+  if (minDiff !== null && Math.abs(minDiff) >= MIN_SPEED_DIFF_KMH) pattern.middle_speed_kmh_vs_best = r(minDiff, 0)
+  const exitDiff = median(clean.map((p) => p.exitKmh - best.exitKmh))
+  if (exitDiff !== null && Math.abs(exitDiff) >= MIN_SPEED_DIFF_KMH) pattern.exit_speed_kmh_vs_best = r(exitDiff, 0)
+  const entryDiff = median(clean.map((p) => p.entryKmh - best.entryKmh))
+  if (entryDiff !== null && Math.abs(entryDiff) >= MIN_SPEED_DIFF_KMH) pattern.arrival_speed_kmh_vs_best = r(entryDiff, 0)
+
+  const gasDiff = best.fullThrottleM === null ? null : median(clean.map((p) => (p.fullThrottleM === null ? null : p.fullThrottleM - best.fullThrottleM!)))
+  if (gasDiff !== null && Math.abs(gasDiff) >= MIN_POINT_DIFF_M) {
+    const later = gasDiff > 0
+    pattern.full_throttle = {
+      compared_to_best: later ? 'later' : 'earlier',
+      ...distanceDiff(gasDiff, best.exitKmh),
+      laps: count((p) => p.fullThrottleM !== null && (later ? p.fullThrottleM - best.fullThrottleM! : best.fullThrottleM! - p.fullThrottleM) >= MIN_POINT_DIFF_M),
+      of_laps: n,
+    }
+  }
+  const gear = median(clean.map((p) => p.gear))
+  if (gear !== null && best.gear !== null && best.gear !== undefined && gear !== best.gear) pattern.gear_in_corner = { usual: gear, in_best_pass: best.gear }
+  const coast = median(clean.map((p) => p.coastS))
+  if (coast !== null && best.coastS !== null && best.coastS !== undefined && Math.abs(coast - best.coastS) >= 0.1)
+    pattern.seconds_without_pedals = { usual: r(coast, 1), in_best_pass: r(best.coastS, 1) }
+  const peak = median(clean.map((p) => p.brakePeak))
+  if (peak !== null && best.brakePeak !== null && best.brakePeak !== undefined && Math.abs(peak - best.brakePeak) >= 0.08)
+    pattern.brake_pressure_pct = { usual: r(peak * 100, 0), in_best_pass: r(best.brakePeak * 100, 0) }
+  const trails = clean.filter((p) => p.trailBraking !== null && p.trailBraking !== undefined)
+  if (trails.length && best.trailBraking !== null && best.trailBraking !== undefined) {
+    const on = count((p) => p.trailBraking === true)
+    if (best.trailBraking !== on / trails.length >= 0.5) pattern.still_braking_when_turning_in = { usual_laps: on, of_laps: trails.length, in_best_pass: best.trailBraking }
+  }
+  return pattern
+}
+
+const roundQuad = (q: readonly number[] | null | undefined, k = 0) => (q ? q.map((v) => r(v, k)) : null)
+
+/** Gomas y frenos de un stint: cómo arrancó y cómo terminó, en lo que publica el sim. */
+function stintTyres(clean: LapInfo[]) {
+  const cars = clean.map((l) => l.car).filter((c): c is LapCar => !!c)
+  if (!cars.length) return null
+  const first = cars[0]
+  const last = cars[cars.length - 1]
+  const peak = cars.map((c) => c.brakePeakC).filter((q): q is Quad => !!q)
+  return {
+    order: 'front-left, front-right, rear-left, rear-right',
+    temp_c_start: roundQuad(first.tyreC),
+    temp_c_end: roundQuad(last.tyreC),
+    inner_middle_outer_c_end: last.tyreZonesC ? last.tyreZonesC.map((z) => roundQuad(z)) : null,
+    pressure_kpa_end: roundQuad(last.tyreKpa),
+    wear_left_pct_end: last.tyreWear ? last.tyreWear.map((v) => r(v * 100, 0)) : null,
+    brake_peak_c: peak.length ? [0, 1, 2, 3].map((k) => r(Math.max(...peak.map((q) => q[k])), 0)) : null,
+  }
+}
+
+/** Lo que se repite en toda la sesión, sin depender de una vuelta en particular. */
+function sessionStory(p: Prepared, valid: LapInfo[]) {
+  const d = p.detail
+  const bestS = d.bestIndex !== null ? d.laps[d.bestIndex].timeS : null
+  const paced = bestS === null ? [] : valid.filter((l) => l.complete && l.timeS <= bestS * PACE_WINDOW)
+  const typical = median(paced.map((l) => l.timeS))
+  const half = paced.length >> 1
+  const firstHalf = median(paced.slice(0, half).map((l) => l.timeS))
+  const secondHalf = median(paced.slice(half).map((l) => l.timeS))
+  const sectors = d.sectorsPct.map((_, k) => {
+    const times = paced.map((l) => l.sectorsS[k]).filter((x): x is number => x !== null)
+    const best = times.length ? Math.min(...times) : null
+    const usual = median(times)
+    return { sector: k + 1, best_s: r(best, 3), usual_s: r(usual, 3), usual_vs_best_s: best !== null && usual !== null ? r(usual - best, 3) : null }
+  })
+  return {
+    total_laps: d.laps.length,
+    clean_laps: valid.length,
+    invalid_or_incomplete_laps: d.laps.length - valid.length,
+    laps_with_off_track: d.laps.filter((_, i) => d.passes[i].some((x) => x?.offTrack)).length,
+    best_lap_s: r(bestS, 3),
+    best_came_on_lap_number: d.bestIndex !== null ? d.laps[d.bestIndex].lap : null,
+    typical_lap_s: r(typical, 3),
+    typical_vs_best_s: bestS !== null && typical !== null ? r(typical - bestS, 3) : null,
+    best_sectors_together_s: r(d.theoreticalS, 3),
+    gain_if_best_sectors_joined_s: bestS !== null && d.theoreticalS !== null ? r(bestS - d.theoreticalS, 3) : null,
+    lap_to_lap_spread_s: r(d.consistencyS, 3),
+    pace_second_half_vs_first_half_s: firstHalf !== null && secondHalf !== null && half >= 2 ? r(secondHalf - firstHalf, 3) : null,
+    sectors,
+    stints: stintsOf(d.laps).map((st) => ({
+      stint: st.n,
+      laps: st.laps.length,
+      clean_laps: st.clean.length,
+      best_s: r(st.bestS, 3),
+      pace_s: r(st.avgS, 3),
+      pace_change_per_lap_s: r(st.trendS, 3),
+      fuel_per_lap_l: r(st.fuelPerLapL, 2),
+      tyres: stintTyres(st.clean),
+    })),
+  }
+}
+
+const cornerKind = (minKmh: number) => (minKmh < 90 ? 'slow' : minKmh < 150 ? 'medium' : 'fast')
+
+/** Resumen de la sesión completa para el LLM: solo números medidos, listos para contarlos sin jerga. */
+export function coachData(p: Prepared): Record<string, unknown> {
   const d = p.detail
   const s = d.summary
-  const valid = d.laps.filter((l) => l.kind === 'valid')
+  const valid = d.laps.filter((l) => l.kind === 'valid' && l.complete)
   const ref = d.bestIndex
-  const lap = focus ?? ref
-  const r1 = (v: number | null | undefined, k = 1) => (v === null || v === undefined || !Number.isFinite(v) ? null : Math.round(v * 10 ** k) / 10 ** k)
-  const median = (xs: number[]) => {
-    const a = xs.filter(Number.isFinite).sort((x, y) => x - y)
-    return a.length ? a[a.length >> 1] : null
+  const refLap = ref ?? d.laps.filter((l) => l.complete).sort((a, b) => a.timeS - b.timeS)[0]?.index ?? null
+  const steerAt = (k: number) => (refLap === null ? NaN : p.laps[refLap].steer[Math.round(d.corners[k].apexPct * p.N)])
+  const nameOf = (k: number) => {
+    const c = d.corners[k]
+    return c ? (c.name ? `${c.label} ${c.name}` : c.label) : null
   }
   return {
-    sim: s.sim === 'ac' ? 'Assetto Corsa' : 'iRacing',
+    sim: SIM_LABEL[s.sim],
     car: s.car,
     track: s.track,
     track_length_m: Math.round(d.trackLengthM),
     session_type: s.sessionType,
     driver: s.driver,
+    session: sessionStory(p, valid),
     laps: d.laps.map((l) => ({
       lap: l.lap,
-      time_s: r1(l.timeS, 3),
+      time_s: r(l.timeS, 3),
       kind: l.kind,
       note: l.reason,
-      sectors_s: l.sectorsS.map((x) => r1(x, 3)),
-      fuel_l: r1(l.fuelUsedL, 2),
-      max_kmh: r1(l.maxSpeedKmh, 0),
+      sectors_s: l.sectorsS.map((x) => r(x, 3)),
+      fuel_l: r(l.fuelUsedL, 2),
+      max_kmh: r(l.maxSpeedKmh, 0),
     })),
     best_lap: ref !== null ? d.laps[ref].lap : null,
-    best_lap_s: ref !== null ? r1(d.laps[ref].timeS, 3) : null,
-    theoretical_best_s: r1(d.theoreticalS, 3),
-    consistency_sigma_s: r1(d.consistencyS, 3),
+    best_lap_s: ref !== null ? r(d.laps[ref].timeS, 3) : null,
+    theoretical_best_s: r(d.theoreticalS, 3),
+    consistency_sigma_s: r(d.consistencyS, 3),
     valid_laps: valid.length,
-    analyzed_lap: lap !== null ? d.laps[lap].lap : null,
     corners: d.corners.map((c, k) => {
-      const clean = valid.map((l) => d.passes[l.index][k]).filter((x): x is CornerPass => !!x && !x.offTrack)
+      const passes = valid.map((l) => d.passes[l.index][k]).filter((x): x is CornerPass => !!x)
+      const clean = passes.filter((x) => !x.offTrack)
       const best = clean.length ? clean.reduce((a, b) => (b.timeS < a.timeS ? b : a)) : null
-      const mine = lap !== null ? d.passes[lap][k] : null
+      const times = clean.map((x) => x.timeS)
+      const usual = median(times)
+      const mean = times.length ? times.reduce((a, t) => a + t, 0) / times.length : 0
       const pass = (x: CornerPass | null) =>
         x && {
-          segment_time_s: r1(x.timeS, 3),
-          entry_kmh: r1(x.entryKmh, 0),
-          min_kmh: r1(x.minKmh, 0),
-          exit_kmh: r1(x.exitKmh, 0),
-          brake_point_m: r1(x.brakeM, 0),
-          full_throttle_m: r1(x.fullThrottleM, 0),
+          segment_time_s: r(x.timeS, 3),
+          entry_kmh: r(x.entryKmh, 0),
+          min_kmh: r(x.minKmh, 0),
+          exit_kmh: r(x.exitKmh, 0),
+          brake_point_m: r(x.brakeM, 0),
+          full_throttle_m: r(x.fullThrottleM, 0),
+          gear: r(x.gear, 0),
           off_track: x.offTrack,
         }
+      const steer = steerAt(k)
+      const prev = k ? d.corners[k - 1] : null
       return {
         corner_id: c.id,
         label: c.label,
         name: c.name,
-        apex_pct: r1(c.apexPct * 100, 1),
+        apex_pct: r(c.apexPct * 100, 1),
+        how_to_recognise_it: {
+          direction: Number.isFinite(steer) && Math.abs(steer) > 0.01 ? (steer > 0 ? 'right' : 'left') : null,
+          kind: best ? cornerKind(best.minKmh) : null,
+          comes_after: nameOf(k - 1),
+          leads_to: nameOf(k + 1),
+          // Del vértice anterior hasta el inicio de esta curva, que es donde termina la recta
+          metres_from_previous_corner: prev ? r((c.startPct - prev.apexPct) * d.trackLengthM, 0) : null,
+          sector: d.sectorsPct.reduce((acc, start, i) => (c.apexPct >= start ? i + 1 : acc), 1),
+        },
+        clean_laps: clean.length,
+        off_track_laps: passes.length - clean.length,
         best_execution: pass(best),
-        analyzed_lap: pass(mine),
         median_clean: clean.length
           ? {
-              segment_time_s: r1(median(clean.map((x) => x.timeS)), 3),
-              min_kmh: r1(median(clean.map((x) => x.minKmh)), 0),
+              segment_time_s: r(usual, 3),
+              min_kmh: r(median(clean.map((x) => x.minKmh)), 0),
             }
           : null,
-        clean_laps: clean.length,
-        loss_vs_best_s: mine && best ? r1(mine.timeS - best.timeS, 3) : null,
+        repeatable_gain_s: best && usual !== null ? r(usual - best.timeS, 3) : null,
+        lockup_laps: clean.some((x) => x.lockupS !== null && x.lockupS !== undefined) ? clean.filter((x) => (x.lockupS ?? 0) >= MIN_LOCKUP_S).length : null,
+        wheelspin_laps: clean.some((x) => x.spinS !== null && x.spinS !== undefined) ? clean.filter((x) => (x.spinS ?? 0) >= MIN_SPIN_S).length : null,
+        lap_to_lap_spread_s: times.length >= 3 ? r(Math.sqrt(times.reduce((a, t) => a + (t - mean) ** 2, 0) / (times.length - 1)), 3) : null,
+        usual_vs_best_pass: best ? cornerPattern(clean, best) : null,
       }
     }),
   }
