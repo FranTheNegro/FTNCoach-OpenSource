@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, Tray } from 'electron'
-import { existsSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import QRCode from 'qrcode'
 import type { DeepPartial, LanState, LiveState, Settings } from '@shared/api'
@@ -277,6 +277,18 @@ function applyLoginItem(s: Settings): void {
   app.setLoginItemSettings({ openAtLogin: s.app.startWithWindows, args: ['--hidden'] })
 }
 
+/** Problemas de la ventana (caídas, errores de consola) en `logs/ventana.log`: en el .exe no hay otra forma de verlos. */
+function logIssue(text: string): void {
+  console.error('[ventana]', text)
+  try {
+    const dir = join(app.getPath('userData'), 'logs')
+    mkdirSync(dir, { recursive: true })
+    appendFileSync(join(dir, 'ventana.log'), `${new Date().toISOString()} v${app.getVersion()} ${text}\n`)
+  } catch {
+    // sin disco no hay registro
+  }
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1320,
@@ -317,6 +329,16 @@ function createWindow(): void {
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) void shell.openExternal(url)
     return { action: 'deny' }
+  })
+  // Si la ventana se cae (memoria, placa de video…) queda anotado y se vuelve a cargar: nunca una ventana vacía
+  let reloads = 0
+  win.webContents.on('render-process-gone', (_e, d) => {
+    logIssue(`la ventana se cayó: ${d.reason} (código ${d.exitCode})`)
+    if (reloads++ < 3) win?.webContents.reload()
+  })
+  win.on('unresponsive', () => logIssue('la ventana dejó de responder'))
+  win.webContents.on('console-message', (e) => {
+    if (e.level === 'error') logIssue(`consola: ${e.message} (${e.sourceId}:${e.lineNumber})`)
   })
   if (DEV_URL) void win.loadURL(DEV_URL)
   else void win.loadFile(join(RENDERER_DIR, 'index.html'))

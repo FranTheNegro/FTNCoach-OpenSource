@@ -11,6 +11,7 @@ import { SIM_LABEL } from '@shared/live'
 import { COACH_QUIZ, answerLabels, type CoachStyle } from '@shared/coach-quiz'
 import * as fmt from '@ui/format'
 import { CoachQuiz } from '../components/CoachQuiz'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { Button, Card, Label, PageHeader } from '../components/ui'
 import { useSettings } from '../hooks'
 import { ProgressTab, hours, useProgress } from './ProgressPage'
@@ -214,11 +215,12 @@ export function ProfilePage() {
           </button>
         ))}
       </div>
-      {tab === 'calendar' && plan && <CalendarTab st={plan} run={runPlan} error={planError} />}
-      {tab === 'plan' && plan && <PlanTab st={plan} run={runPlan} error={planError} sessions={sessions} onGoalsSaved={async () => setS(await window.ftn.settings())} />}
-      {tab === 'tracking' && plan && <TrackingTab st={plan} sessions={sessions} onProgress={() => setTab('progress')} />}
-      {tab === 'progress' && <ProgressTab />}
-      {tab === 'coach' && plan && <CoachTab st={plan} run={runPlan} error={planError} onApplied={() => setTab('plan')} />}
+      <ErrorBoundary key={tab} where={`Perfil · ${TABS.find(([id]) => id === tab)?.[1]}`}>
+        {tab === 'calendar' && plan && <CalendarTab st={plan} run={runPlan} error={planError} />}
+        {tab === 'plan' && plan && <PlanTab st={plan} run={runPlan} error={planError} sessions={sessions} onGoalsSaved={async () => setS(await window.ftn.settings())} />}
+        {tab === 'tracking' && plan && <TrackingTab st={plan} sessions={sessions} onProgress={() => setTab('progress')} />}
+        {tab === 'progress' && <ProgressTab />}
+        {tab === 'coach' && plan && <CoachTab st={plan} run={runPlan} error={planError} onApplied={() => setTab('plan')} />}
       {tab === 'driver' && (
         <div className="flex flex-col gap-5">
           {!empty && !editing && (
@@ -341,6 +343,7 @@ export function ProfilePage() {
           )}
         </div>
       )}
+      </ErrorBoundary>
     </div>
   )
 }

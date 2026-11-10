@@ -3,6 +3,7 @@ import type { SessionSummary } from '@shared/analysis'
 import { Activity, History, SlidersHorizontal, User } from 'lucide-react'
 import { LogoHorizontal } from '@ui/Logo'
 import { NavContext, type Nav, type Route, type SettingsSection } from './nav'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { LivePage } from './pages/LivePage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SessionsPage } from './pages/SessionsPage'
@@ -63,10 +64,12 @@ export function App() {
         <div className="mt-auto px-3 pb-1 data text-[11px] text-niebla">v{window.ftn.version}</div>
       </nav>
       <main className={route === 'sessions' && openSession ? 'overflow-hidden px-4 pt-1 pb-3 min-w-0 min-h-0' : 'overflow-y-auto p-8 min-w-0'}>
-        {route === 'live' && <LivePage />}
-        {route === 'sessions' && <SessionsPage open={openSession} onOpen={setOpenSession} query={query} onQuery={setQuery} />}
-        {route === 'profile' && <ProfilePage />}
-        {route === 'settings' && <SettingsPage focus={section} />}
+        <ErrorBoundary key={route} where={route}>
+          {route === 'live' && <LivePage />}
+          {route === 'sessions' && <SessionsPage open={openSession} onOpen={setOpenSession} query={query} onQuery={setQuery} />}
+          {route === 'profile' && <ProfilePage />}
+          {route === 'settings' && <SettingsPage focus={section} />}
+        </ErrorBoundary>
       </main>
     </div>
     </NavContext.Provider>

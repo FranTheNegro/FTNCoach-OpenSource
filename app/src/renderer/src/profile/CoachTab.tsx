@@ -21,7 +21,10 @@ export function CoachTab({ st, run, error, onApplied }: { st: PlanState; run: (p
   const busy = st.busy === 'assistant'
   const chat = st.assistant
   const last = chat.at(-1)
-  useEffect(() => end.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), [chat.length, st.streaming])
+  // Con llaves: scrollIntoView devuelve una promesa y React la tomaría como limpieza del efecto
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [chat.length, st.streaming])
   const ask = (q: string) => {
     setText('')
     void run(window.ftn.planAsk(q))

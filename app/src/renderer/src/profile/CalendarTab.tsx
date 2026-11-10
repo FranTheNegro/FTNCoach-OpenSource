@@ -134,7 +134,10 @@ function ImportPanel({ st, run }: { st: PlanState; run: (p: Promise<PlanState>) 
   useEffect(() => setRows(imp.proposal ?? []), [imp.proposal])
   const end = useRef<HTMLDivElement>(null)
   const busy = st.busy === 'import'
-  useEffect(() => end.current?.scrollIntoView({ block: 'nearest' }), [imp.chat.length, st.streaming])
+  // Con llaves: scrollIntoView devuelve una promesa y React la tomaría como limpieza del efecto
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'nearest' })
+  }, [imp.chat.length, st.streaming])
 
   return (
     <Card className="border-ultramar flex flex-col gap-4">
