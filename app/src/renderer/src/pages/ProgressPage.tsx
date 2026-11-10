@@ -1,6 +1,6 @@
 /**
- * Progreso: la evolución de tu mejor vuelta en cada auto y pista, con las
- * sesiones de esta PC.
+ * Progreso (pestaña de Perfil): la evolución de tu mejor vuelta en cada auto y
+ * pista, con las sesiones de esta PC.
  */
 import { Database } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -9,7 +9,7 @@ import { isLocal, type SessionSummary } from '@shared/analysis'
 import { historicalIdeal } from '@shared/history'
 import * as fmt from '@ui/format'
 import { BestLapChart } from '../components/charts'
-import { Card, Label, PageHeader } from '../components/ui'
+import { Card, Label } from '../components/ui'
 import { useLibrary, useWidth } from '../hooks'
 import { GoLink } from '../nav'
 
@@ -170,7 +170,7 @@ function MonthBars({ months }: { months: { month: string; timeS: number }[] }) {
   )
 }
 
-export function ProgressPage() {
+export function ProgressTab() {
   const { combos, sessions } = useProgress()
   const [selected, setSelected] = useState<string | null>(null)
   const active = combos.find((c) => c.key === selected) ?? combos[0] ?? null
@@ -196,10 +196,10 @@ export function ProgressPage() {
   const last = pts.at(-1)?.bestS
 
   return (
-    <div className="max-w-[1300px]">
-      <PageHeader title="Progreso">
+    <div>
+      <div className="flex justify-end -mt-2 mb-3">
         <Label icon={Database}>{source}</Label>
-      </PageHeader>
+      </div>
 
       <div className="grid grid-cols-4 gap-4 mb-5">
         <Kpi label="Tiempo en pista" value={hours(timeS)} sub={source} />

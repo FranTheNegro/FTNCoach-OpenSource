@@ -4,7 +4,7 @@
  */
 import { createContext, useContext, type ReactNode } from 'react'
 
-export type Route = 'live' | 'sessions' | 'progress' | 'profile' | 'settings'
+export type Route = 'live' | 'sessions' | 'profile' | 'settings'
 export type SettingsSection = 'lan' | 'coach'
 
 export interface Nav {

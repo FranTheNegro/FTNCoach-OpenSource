@@ -1,18 +1,16 @@
 import { useMemo, useState } from 'react'
 import type { SessionSummary } from '@shared/analysis'
-import { Activity, History, SlidersHorizontal, TrendingUp, User } from 'lucide-react'
+import { Activity, History, SlidersHorizontal, User } from 'lucide-react'
 import { LogoHorizontal } from '@ui/Logo'
 import { NavContext, type Nav, type Route, type SettingsSection } from './nav'
 import { LivePage } from './pages/LivePage'
 import { ProfilePage } from './pages/ProfilePage'
-import { ProgressPage } from './pages/ProgressPage'
 import { SessionsPage } from './pages/SessionsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 const NAV: { id: Route; label: string; icon: React.ReactNode }[] = [
   { id: 'live', label: 'En vivo', icon: <Activity size={18} aria-hidden="true" /> },
   { id: 'sessions', label: 'Sesiones', icon: <History size={18} aria-hidden="true" /> },
-  { id: 'progress', label: 'Progreso', icon: <TrendingUp size={18} aria-hidden="true" /> },
   { id: 'profile', label: 'Perfil', icon: <User size={18} aria-hidden="true" /> },
   { id: 'settings', label: 'Ajustes', icon: <SlidersHorizontal size={18} aria-hidden="true" /> },
 ]
@@ -67,7 +65,6 @@ export function App() {
       <main className={route === 'sessions' && openSession ? 'overflow-hidden px-4 pt-1 pb-3 min-w-0 min-h-0' : 'overflow-y-auto p-8 min-w-0'}>
         {route === 'live' && <LivePage />}
         {route === 'sessions' && <SessionsPage open={openSession} onOpen={setOpenSession} query={query} onQuery={setQuery} />}
-        {route === 'progress' && <ProgressPage />}
         {route === 'profile' && <ProfilePage />}
         {route === 'settings' && <SettingsPage focus={section} />}
       </main>

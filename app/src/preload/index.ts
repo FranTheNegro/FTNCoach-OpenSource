@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { CoachState, LibraryState } from '@shared/analysis'
 import type { FtnApi, LiveState } from '@shared/api'
+import type { PlanState } from '@shared/plan'
 
 function listen<T>(channel: string, cb: (v: T) => void): () => void {
   const fn = (_e: unknown, v: T) => cb(v)
@@ -38,6 +39,19 @@ const api: FtnApi = {
   hasCoachKey: (key) => ipcRenderer.invoke('coach:hasKey', key),
   setCoachKey: (key, value) => ipcRenderer.invoke('coach:setKey', key, value),
   claudeCodeVersion: () => ipcRenderer.invoke('coach:claudeCode'),
+  planState: () => ipcRenderer.invoke('plan:state'),
+  onPlan: (cb) => listen<PlanState>('plan:changed', cb),
+  planSaveGoals: (goals) => ipcRenderer.invoke('plan:saveGoals', goals),
+  planSaveCalendar: (events) => ipcRenderer.invoke('plan:saveCalendar', events),
+  planImport: () => ipcRenderer.invoke('plan:import'),
+  planImportAsk: (text) => ipcRenderer.invoke('plan:importAsk', text),
+  planImportAccept: (events) => ipcRenderer.invoke('plan:importAccept', events),
+  planImportCancel: () => ipcRenderer.invoke('plan:importCancel'),
+  planGenerate: (change) => ipcRenderer.invoke('plan:generate', change),
+  planToggleDone: (itemId) => ipcRenderer.invoke('plan:toggleDone', itemId),
+  planDelete: () => ipcRenderer.invoke('plan:delete'),
+  planAsk: (text) => ipcRenderer.invoke('plan:ask', text),
+  planClearChat: () => ipcRenderer.invoke('plan:clearChat'),
 
   acApp: () => ipcRenderer.invoke('ac:status'),
   installAcApp: () => ipcRenderer.invoke('ac:install'),

@@ -1,6 +1,7 @@
 /** Contrato entre el proceso principal y la app de escritorio (window.ftn). */
 import type { CoachKeyId, CoachProvider, CoachState, CompareResult, DriverStyle, LibraryState, SessionDetail, TrackMapResult } from './analysis'
 import type { CoachStyle } from './coach-quiz'
+import type { PlanGoals, PlanState, RaceEvent } from './plan'
 import type { EngineStatus, SessionMeta } from './live'
 
 
@@ -132,6 +133,24 @@ export interface FtnApi {
   setCoachKey(key: CoachKeyId, value: string | null): Promise<boolean>
   /** Versión de Claude Code instalada (null si no está). */
   claudeCodeVersion(): Promise<string | null>
+
+  /** Calendario, objetivos y plan de entrenamiento del piloto. */
+  planState(): Promise<PlanState>
+  onPlan(cb: (s: PlanState) => void): () => void
+  planSaveGoals(goals: PlanGoals): Promise<PlanState>
+  planSaveCalendar(events: RaceEvent[]): Promise<PlanState>
+  /** Elige el PDF o las imágenes del calendario y arranca la conversación con el coach. */
+  planImport(): Promise<PlanState>
+  planImportAsk(text: string): Promise<PlanState>
+  planImportAccept(events: RaceEvent[]): Promise<PlanState>
+  planImportCancel(): Promise<PlanState>
+  /** Arma el plan; con un pedido, ajusta el que hay. */
+  planGenerate(change: string | null): Promise<PlanState>
+  planToggleDone(itemId: string): Promise<PlanState>
+  planDelete(): Promise<PlanState>
+  /** Charla con el coach sobre tu carrera, tus objetivos y tu plan. */
+  planAsk(text: string): Promise<PlanState>
+  planClearChat(): Promise<PlanState>
 
   acApp(): Promise<AcAppStatus>
   installAcApp(): Promise<AcAppStatus>

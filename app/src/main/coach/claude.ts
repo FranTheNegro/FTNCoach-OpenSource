@@ -9,6 +9,27 @@ export interface ClaudeMessage {
   content: string
 }
 
+/** Un archivo que la IA tiene que leer (PDF o imagen), en base64. Va con el primer mensaje del piloto. */
+export interface Attachment {
+  name: string
+  mime: string
+  data: string
+}
+
+export const isPdf = (a: Attachment) => a.mime === 'application/pdf'
+
+/** Bloques de la API de Claude para los adjuntos (también los acepta Claude Code). */
+export function claudeBlocks(attachments: Attachment[]): Record<string, unknown>[] {
+  return attachments.map((a) => ({ type: isPdf(a) ? 'document' : 'image', source: { type: 'base64', media_type: a.mime, data: a.data } }))
+}
+
+/** Los adjuntos van al principio del primer mensaje del piloto. */
+function withAttachments(messages: ClaudeMessage[], attachments: Attachment[] | undefined): unknown[] {
+  if (!attachments?.length) return messages
+  const first = messages.findIndex((m) => m.role === 'user')
+  return messages.map((m, i) => (i === first ? { role: m.role, content: [...claudeBlocks(attachments), { type: 'text', text: m.content }] } : m))
+}
+
 export interface ClaudeRequest {
   /** Otro endpoint con la misma API (OpenCode). */
   url?: string
@@ -20,6 +41,7 @@ export interface ClaudeRequest {
   /** Bloques del system prompt; los estables van primero para aprovechar la caché. */
   system: string[]
   messages: ClaudeMessage[]
+  attachments?: Attachment[]
   maxTokens: number
   onText?: (chunk: string) => void
   signal?: AbortSignal
@@ -65,7 +87,7 @@ export async function streamClaude(req: ClaudeRequest): Promise<string> {
           text,
           ...(i === req.system.length - 1 ? { cache_control: { type: 'ephemeral' } } : {}),
         })),
-        messages: req.messages,
+        messages: withAttachments(req.messages, req.attachments),
       }),
     })
   } catch (err) {

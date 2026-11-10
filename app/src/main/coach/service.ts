@@ -8,7 +8,7 @@ import { app, safeStorage } from 'electron'
 import { EventEmitter } from 'node:events'
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { COACH_PROVIDERS, type ChatMessage, type CoachFollowUp, type CoachKeyId, type CoachProvider, type CoachReport, type CoachState } from '@shared/analysis'
+import { COACH_PROVIDERS, type ChatMessage, type SessionSummary, type CoachFollowUp, type CoachKeyId, type CoachProvider, type CoachReport, type CoachState } from '@shared/analysis'
 import { streamLlm, stripThinking } from './llm'
 import type { CoachStyle } from '@shared/coach-quiz'
 import { buildMemory, cornerOfTitle, cornersOf, type CoachMemory, type MemorySources } from './memory'
@@ -79,8 +79,8 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
     return true
   }
 
-  /** Proveedor y modelo activos, con su clave. */
-  private llm(): { provider: CoachProvider; model: string; apiKey: string; label: string } {
+  /** Proveedor y modelo activos, con su clave (también lo usa el plan). */
+  connection(): { provider: CoachProvider; model: string; apiKey: string; label: string } {
     const { provider, model } = this.choice()
     const info = COACH_PROVIDERS.find((p) => p.id === provider)!
     const label = `${info.label.split(' · ')[0]} · ${model}`
@@ -155,7 +155,7 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
   /** Reporte de la sesión completa. */
   analyze(id: string): Promise<CoachState> {
     return this.run(id, async () => {
-      const llm = this.llm()
+      const llm = this.connection()
       const data = await this.sessionData(id)
       this.set(id, { streaming: 'Revisando tus sesiones anteriores…' })
       const { memory, followUp } = await this.recall(id, data)
@@ -187,7 +187,7 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
     const q = question.trim()
     if (!q) return Promise.resolve(this.state(id))
     return this.run(id, async () => {
-      const llm = this.llm()
+      const llm = this.connection()
       const saved = this.load(id)
       const chat: ChatMessage[] = [...saved.chat, { role: 'user', text: q, at: Date.now() }]
       this.save(id, { ...saved, chat })
@@ -210,6 +210,26 @@ export class CoachService extends EventEmitter<{ state: [CoachState] }> {
       })
       this.save(id, { ...this.load(id), chat: [...chat, { role: 'assistant', text: answer.trim(), at: Date.now() }] })
     })
+  }
+
+  /** Lo que el coach le dijo al piloto en sus últimas sesiones con reporte, para el plan. */
+  recentCoaching(sessions: SessionSummary[], max = 6): Record<string, unknown>[] {
+    const out: Record<string, unknown>[] = []
+    for (const s of [...sessions].sort((a, b) => b.startedAt - a.startedAt)) {
+      if (out.length >= max) break
+      const r = this.load(s.id).report
+      if (!r) continue
+      out.push({
+        date: new Date(s.startedAt).toISOString().slice(0, 10),
+        car: s.car,
+        track: s.track,
+        headline: r.headline,
+        corrections: r.corrections.map((c) => `${c.title}: ${c.solution}`),
+        ...(r.recurring ? { recurring: r.recurring } : {}),
+        ...(r.drill.description ? { drill: r.drill.description } : {}),
+      })
+    }
+    return out
   }
 
   clearChat(id: string): CoachState {

@@ -5,7 +5,7 @@
  */
 import { app } from 'electron'
 import { COACH_PROVIDERS, opencodeApi, type CoachProvider } from '@shared/analysis'
-import { streamClaude, type ClaudeMessage } from './claude'
+import { isPdf, streamClaude, type Attachment, type ClaudeMessage } from './claude'
 import { streamClaudeCode } from './claude-code'
 
 export interface LlmRequest {
@@ -18,6 +18,8 @@ export interface LlmRequest {
   /** Bloques del system prompt (Claude los cachea; el resto los junta). */
   system: string[]
   messages: ClaudeMessage[]
+  /** PDF o imágenes que la IA tiene que leer; van con el primer mensaje del piloto. */
+  attachments?: Attachment[]
   maxTokens: number
   /** Pedir JSON puro (Gemini lo fuerza con responseMimeType). */
   json?: boolean
@@ -80,7 +82,14 @@ async function post(provider: string, url: string, headers: Record<string, strin
 
 async function streamGemini(req: LlmRequest): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(req.model)}:streamGenerateContent?alt=sse`
-  const contents = req.messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }))
+  const first = req.messages.findIndex((m) => m.role === 'user')
+  const contents = req.messages.map((m, i) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [
+      ...(i === first ? (req.attachments ?? []).map((a) => ({ inline_data: { mime_type: a.mime, data: a.data } })) : []),
+      { text: m.content } as Record<string, unknown>,
+    ],
+  }))
   // Gemma no acepta instrucciones de sistema ni JSON forzado: el sistema va al principio del primer mensaje
   const gemma = req.model.startsWith('gemma-')
   if (gemma && contents[0]) contents[0].parts.unshift({ text: req.system.join('\n\n') })
@@ -105,12 +114,26 @@ async function streamGemini(req: LlmRequest): Promise<string> {
   return text
 }
 
+/** Formato de OpenAI (y OpenRouter) para los adjuntos: imágenes como data URL y PDF como archivo. */
+function openAiMessages(req: LlmRequest): unknown[] {
+  if (!req.attachments?.length) return req.messages
+  const first = req.messages.findIndex((m) => m.role === 'user')
+  return req.messages.map((m, i) => {
+    if (i !== first) return m
+    const files = req.attachments!.map((a) => {
+      const url = `data:${a.mime};base64,${a.data}`
+      return isPdf(a) ? { type: 'file', file: { filename: a.name, file_data: url } } : { type: 'image_url', image_url: { url } }
+    })
+    return { role: m.role, content: [...files, { type: 'text', text: m.content }] }
+  })
+}
+
 async function streamOpenAi(req: LlmRequest, url: string, provider: string, headers: Record<string, string> = {}): Promise<string> {
   const res = await post(provider, url, { authorization: `Bearer ${req.apiKey}`, ...headers }, {
     model: req.model,
     stream: true,
     max_tokens: req.maxTokens,
-    messages: [{ role: 'system', content: req.system.join('\n\n') }, ...req.messages],
+    messages: [{ role: 'system', content: req.system.join('\n\n') }, ...openAiMessages(req)],
   })
   let text = ''
   await readSse(res, (data) => {

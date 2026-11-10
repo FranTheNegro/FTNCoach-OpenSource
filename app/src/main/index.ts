@@ -11,6 +11,8 @@ import { AnalysisService } from './analysis/service'
 import type { CornerTip } from './analysis/protocol'
 import { Recorder } from './analysis/recording'
 import { CoachService } from './coach/service'
+import { PLAN_FILE_EXTENSIONS, PlanService, type PlanContext } from './coach/plan'
+import type { PlanGoals, RaceEvent } from '@shared/plan'
 import { claudeCodeVersion } from './coach/claude-code'
 import { acAppStatus, installAcApp } from './ac-app'
 import { LanServer } from './lan/server'
@@ -44,30 +46,25 @@ const analysis = new AnalysisService()
 const recorder = new Recorder(() => settings.get().paths.recordings)
 const videos = new VideoStore()
 const style = new StyleStore()
-const coach = new CoachService(
+const coach: CoachService = new CoachService(
   () => {
     const c = settings.get().coach
     return { provider: c.provider, model: c.models[c.provider] }
   },
   () => settings.get().coachStyle,
-  async (id) => {
+  async (id): Promise<Record<string, unknown>> => {
     const data = await analysis.request({ type: 'coachData', sessionId: id })
-    // Contexto real del piloto: su perfil y su historial en este auto y pista
-    const p = settings.get().profile
-    const profile = {
-      name: p.name || null,
-      years_experience: p.experienceYears || null,
-      discipline: p.discipline || null,
-      about: p.about || null,
-      goals: p.goals || null,
-    }
+    // Contexto real del piloto: su perfil, su historial en este auto y pista y su calendario
+    const profile = profileContext()
+    const racePlan = plan.coachContext()
     const summary = analysis.state.sessions.find((x) => x.id === id)
     const local = summary ? localHistory(analysis.state.sessions, summary) : null
     const driverStyle = style.coachContext()
     return {
       ...data,
-      ...(Object.values(profile).some((v) => v !== null) ? { driver_profile: profile } : {}),
+      ...(profile ? { driver_profile: profile } : {}),
       ...(driverStyle ? { driver_style: driverStyle } : {}),
+      ...(racePlan ? { race_plan: racePlan } : {}),
       ...(local?.sessionsBefore
         ? {
             driver_history: {
@@ -84,6 +81,59 @@ const coach = new CoachService(
     data: (id) => analysis.request({ type: 'coachData', sessionId: id, lap: null }),
   },
 )
+/** Lo que el piloto contó de sí mismo (null si no cargó nada). */
+function profileContext(): Record<string, unknown> | null {
+  const p = settings.get().profile
+  const profile = {
+    name: p.name || null,
+    years_experience: p.experienceYears || null,
+    discipline: p.discipline || null,
+    about: p.about || null,
+    goals: p.goals || null,
+  }
+  return Object.values(profile).some((v) => v !== null) ? profile : null
+}
+
+/** Su carrera completa para el plan: qué manejó, cómo le fue y qué le dijo el coach. */
+function planContext(): PlanContext {
+  const sessions = analysis.state.sessions
+  const groups = new Map<string, { sim: string; car: string; track: string; sessions: number; best: number | null; last: number }>()
+  for (const s of sessions) {
+    const key = `${s.sim}|${s.car}|${s.track}`
+    const g = groups.get(key) ?? { sim: s.sim, car: s.car, track: s.track, sessions: 0, best: null, last: 0 }
+    g.sessions++
+    if (s.bestLapS !== null && (g.best === null || s.bestLapS < g.best)) g.best = s.bestLapS
+    g.last = Math.max(g.last, s.startedAt)
+    groups.set(key, g)
+  }
+  const progress: Record<string, unknown>[] = [...groups.values()]
+    .sort((a, b) => b.last - a.last)
+    .slice(0, 25)
+    .map((g) => ({ sim: g.sim, car: g.car, track: g.track, sessions: g.sessions, best_lap_s: r3(g.best), last_driven: new Date(g.last).toISOString().slice(0, 10) }))
+  const cars = new Set(sessions.map((s) => s.car))
+  const tracks = new Set(sessions.map((s) => s.track))
+  let licences: unknown[] | null = null
+  return {
+    profile: profileContext(),
+    driverStyle: style.coachContext(),
+    licences,
+    progress,
+    recentCoaching: coach.recentCoaching(sessions),
+    driven: { cars: [...cars], tracks: [...tracks] },
+  }
+}
+
+const plan: PlanService = new PlanService({
+  connection: () => coach.connection(),
+  style: () => settings.get().coachStyle,
+  context: planContext,
+  sessions: () => analysis.state.sessions,
+  goalText: {
+    get: () => settings.get().profile.goals,
+    set: (goals) => void settings.update({ profile: { goals } }),
+  },
+})
+
 /** Tramos de rally (ACR) aprendidos y la cartografía descargada. */
 const acrStagesDir = () => join(app.getPath('userData'), 'acr', 'stages')
 let stageMaps: StageMaps | null = null
@@ -343,6 +393,25 @@ function registerIpc(): void {
   ipcMain.handle('coach:hasKey', (_e, k: CoachKeyId) => coach.hasKey(k))
   ipcMain.handle('coach:setKey', (_e, k: CoachKeyId, key: string | null) => coach.setKey(k, key))
   ipcMain.handle('coach:claudeCode', () => claudeCodeVersion())
+  ipcMain.handle('plan:state', () => plan.state())
+  ipcMain.handle('plan:saveGoals', (_e, goals: PlanGoals) => plan.saveGoals(goals))
+  ipcMain.handle('plan:saveCalendar', (_e, events: RaceEvent[]) => plan.saveCalendar(events))
+  ipcMain.handle('plan:import', async () => {
+    const res = await dialog.showOpenDialog(win!, {
+      title: 'Elegí tu calendario',
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'PDF o imagen', extensions: PLAN_FILE_EXTENSIONS }],
+    })
+    return res.canceled ? plan.state() : plan.startImport(res.filePaths)
+  })
+  ipcMain.handle('plan:importAsk', (_e, text: string) => plan.askImport(text))
+  ipcMain.handle('plan:importAccept', (_e, events: RaceEvent[]) => plan.acceptImport(events))
+  ipcMain.handle('plan:importCancel', () => plan.cancelImport())
+  ipcMain.handle('plan:generate', (_e, change: string | null) => plan.generate(change))
+  ipcMain.handle('plan:toggleDone', (_e, itemId: string) => plan.toggleDone(itemId))
+  ipcMain.handle('plan:delete', () => plan.deletePlan())
+  ipcMain.handle('plan:ask', (_e, text: string) => plan.askAssistant(text))
+  ipcMain.handle('plan:clearChat', () => plan.clearAssistant())
 
   ipcMain.handle('ac:status', () => acAppStatus())
   ipcMain.handle('ac:install', () => installAcApp())
@@ -367,6 +436,7 @@ function registerIpc(): void {
     win?.webContents.send('library:changed', st)
   })
   coach.on('state', (st) => win?.webContents.send('coach:changed', st))
+  plan.on('state', (st) => win?.webContents.send('plan:changed', st))
 
   const push = () => win?.webContents.send('live:changed', liveState())
   engine.on('status', push)

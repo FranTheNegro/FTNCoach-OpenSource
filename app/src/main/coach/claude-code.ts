@@ -7,7 +7,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { app } from 'electron'
-import type { ClaudeMessage } from './claude'
+import { claudeBlocks, type Attachment, type ClaudeMessage } from './claude'
 
 const TIMEOUT_MS = 5 * 60_000
 const NOT_FOUND = 'No encontramos Claude Code en esta PC. Instalalo desde claude.com/code, abrí una terminal, corré `claude` una vez para loguearte y volvé a probar.'
@@ -16,6 +16,8 @@ export interface ClaudeCodeRequest {
   model: string
   system: string[]
   messages: ClaudeMessage[]
+  /** PDF o imágenes: van como bloques en un mensaje stream-json, sin darle herramientas. */
+  attachments?: Attachment[]
   onText?: (chunk: string) => void
 }
 
@@ -82,7 +84,11 @@ export function streamClaudeCode(req: ClaudeCodeRequest): Promise<string> {
     '--setting-sources', '',
     '--disable-slash-commands',
     '--no-session-persistence',
+    ...(req.attachments?.length ? ['--input-format', 'stream-json'] : []),
   ]
+  const input = req.attachments?.length
+    ? JSON.stringify({ type: 'user', message: { role: 'user', content: [...claudeBlocks(req.attachments), { type: 'text', text: prompt(req.messages) }] } }) + '\n'
+    : prompt(req.messages)
   const attempt = (shell: boolean) =>
     new Promise<string>((resolve, reject) => {
       const p = run(args, cwd, shell)
@@ -128,7 +134,7 @@ export function streamClaudeCode(req: ClaudeCodeRequest): Promise<string> {
         reject(new Error(friendly(why)))
       })
       p.stdin?.on('error', () => undefined)
-      p.stdin?.end(prompt(req.messages))
+      p.stdin?.end(input)
     })
   return attempt(false)
     .catch((err: NodeJS.ErrnoException) => {

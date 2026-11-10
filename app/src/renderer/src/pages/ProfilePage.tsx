@@ -13,7 +13,23 @@ import * as fmt from '@ui/format'
 import { CoachQuiz } from '../components/CoachQuiz'
 import { Button, Card, Label, PageHeader } from '../components/ui'
 import { useSettings } from '../hooks'
-import { hours, useProgress } from './ProgressPage'
+import { ProgressTab, hours, useProgress } from './ProgressPage'
+import { CalendarTab } from '../profile/CalendarTab'
+import { CoachTab } from '../profile/CoachTab'
+import { PlanTab } from '../profile/PlanTab'
+import { TrackingTab } from '../profile/TrackingTab'
+import { usePlan } from '../profile/plan-data'
+
+type ProfileTab = 'driver' | 'coach' | 'progress' | 'calendar' | 'plan' | 'tracking'
+
+const TABS: [ProfileTab, string][] = [
+  ['driver', 'Piloto'],
+  ['coach', 'Coach'],
+  ['progress', 'Progreso'],
+  ['calendar', 'Calendario'],
+  ['plan', 'Plan de entrenamiento'],
+  ['tracking', 'Seguimiento'],
+]
 
 const DISCIPLINES = ['GT y sport prototipos', 'Fórmula', 'Turismo', 'Óvalo', 'Tierra y rally', 'Varias']
 
@@ -154,6 +170,8 @@ export function ProfilePage() {
   const [editing, setEditing] = useState(false)
   const { combos, sessions } = useProgress()
   const [style, setStyle] = useState<DriverStyle | null>(null)
+  const [tab, setTab] = useState<ProfileTab>('driver')
+  const [plan, runPlan, planError] = usePlan()
   useEffect(() => void window.ftn.driverStyle().then(setStyle), [])
   if (!s) return null
   const p = s.profile
@@ -161,6 +179,8 @@ export function ProfilePage() {
   const save = async (profile: Settings['profile']) => {
     setS(await window.ftn.saveSettings({ profile }))
     setEditing(false)
+    // El objetivo es el mismo que usa el plan
+    void runPlan(window.ftn.planState())
   }
 
   // Cuánto te separa tu PB de tu vuelta ideal (tus mejores sectores) en cada combinación
@@ -175,130 +195,152 @@ export function ProfilePage() {
   const valid = sessions.reduce((a, x) => a + x.validLaps, 0)
 
   return (
-    <div className="max-w-[1100px]">
+    <div className={tab === 'progress' ? 'max-w-[1300px]' : 'max-w-[1100px]'}>
       <PageHeader title={p.name || 'Tu perfil'}>
-        {!empty && !editing && <Button onClick={() => setEditing(true)}>Editar perfil</Button>}
+        {tab === 'driver' && !empty && !editing && <Button onClick={() => setEditing(true)}>Editar perfil</Button>}
       </PageHeader>
-      <div className="flex flex-col gap-5">
-        {!empty && !editing && (
-          <>
-            <div className="data text-[12px] tracking-[0.12em] uppercase text-niebla -mt-3">
-              {[p.experienceYears ? `${p.experienceYears} años corriendo` : null, p.discipline || null].filter(Boolean).join(' · ') || 'Piloto'}
-            </div>
-            {(p.about || p.goals) && (
-              <div className="grid grid-cols-2 gap-4">
-                {p.about && (
-                  <Card>
-                    <Label icon={Medal}>Tu experiencia</Label>
-                    <p className="mt-2 text-plata leading-relaxed whitespace-pre-wrap">{p.about}</p>
-                  </Card>
-                )}
-                {p.goals && (
-                  <Card className="border-ultramar">
-                    <Label icon={Target} color="var(--ftn-azul)">Objetivo actual</Label>
-                    <p className="mt-2 leading-relaxed whitespace-pre-wrap">{p.goals}</p>
-                  </Card>
-                )}
-              </div>
-            )}
-          </>
-        )}
-        {(empty || editing) && <ProfileForm value={p} onSave={save} onCancel={editing ? () => setEditing(false) : undefined} />}
-        <YourCoach
-          value={s.coachStyle}
-          onSave={async (coachStyle) => {
-            setS(await window.ftn.saveSettings({ coachStyle }))
-          }}
-        />
-
-
-        <div className="grid grid-cols-4 gap-4">
-          {(
-            [
-              ['Sesiones', String(sessions.length)],
-              ['Vueltas', String(laps)],
-              ['Válidas', laps ? `${Math.round((100 * valid) / laps)} %` : fmt.DASH],
-              ['En pista', hours(sessions.reduce((a, x) => a + x.durationS, 0))],
-            ] as const
-          ).map(([label, value]) => (
-            <div key={label} className="bg-carbono-2 border border-grafito rounded-card px-5 py-4">
-              <div className="data text-[12px] tracking-[0.1em] text-niebla uppercase">{label}</div>
-              <div className="data text-[26px] font-bold mt-1.5">{value}</div>
-            </div>
-          ))}
-        </div>
-
-        <section>
-          <h2 className="text-[18px] font-bold mb-1">Tu estilo de manejo</h2>
-          {style ? (
+      <div role="tablist" className="flex gap-0.5 border-b border-grafito -mt-2 mb-6">
+        {TABS.map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={`h-11 px-4 -mb-px border-b-2 font-semibold text-[15px] transition-colors ${
+              tab === id ? 'border-ultramar text-blanco' : 'border-transparent text-plata hover:text-blanco'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === 'calendar' && plan && <CalendarTab st={plan} run={runPlan} error={planError} />}
+      {tab === 'plan' && plan && <PlanTab st={plan} run={runPlan} error={planError} sessions={sessions} onGoalsSaved={async () => setS(await window.ftn.settings())} />}
+      {tab === 'tracking' && plan && <TrackingTab st={plan} sessions={sessions} onProgress={() => setTab('progress')} />}
+      {tab === 'progress' && <ProgressTab />}
+      {tab === 'coach' && plan && <CoachTab st={plan} run={runPlan} error={planError} onApplied={() => setTab('plan')} />}
+      {tab === 'driver' && (
+        <div className="flex flex-col gap-5">
+          {!empty && !editing && (
             <>
-              <p className="text-[13px] text-niebla mb-3">
-                Medido en {style.sessions === 1 ? 'la última sesión que abriste' : `las últimas ${style.sessions} sesiones que abriste`}
-                {style.tentative ? ': todavía son pocos datos, tomalo como una tendencia.' : '.'}
-              </p>
+              <div className="data text-[12px] tracking-[0.12em] uppercase text-niebla -mt-3">
+                {[p.experienceYears ? `${p.experienceYears} años corriendo` : null, p.discipline || null].filter(Boolean).join(' · ') || 'Piloto'}
+              </div>
+              {(p.about || p.goals) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {p.about && (
+                    <Card>
+                      <Label icon={Medal}>Tu experiencia</Label>
+                      <p className="mt-2 text-plata leading-relaxed whitespace-pre-wrap">{p.about}</p>
+                    </Card>
+                  )}
+                  {p.goals && (
+                    <Card className="border-ultramar">
+                      <Label icon={Target} color="var(--ftn-azul)">Objetivo actual</Label>
+                      <p className="mt-2 leading-relaxed whitespace-pre-wrap">{p.goals}</p>
+                    </Card>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          {(empty || editing) && <ProfileForm value={p} onSave={save} onCancel={editing ? () => setEditing(false) : undefined} />}
+          <YourCoach
+            value={s.coachStyle}
+            onSave={async (coachStyle) => {
+              setS(await window.ftn.saveSettings({ coachStyle }))
+            }}
+          />
+
+
+          <div className="grid grid-cols-4 gap-4">
+            {(
+              [
+                ['Sesiones', String(sessions.length)],
+                ['Vueltas', String(laps)],
+                ['Válidas', laps ? `${Math.round((100 * valid) / laps)} %` : fmt.DASH],
+                ['En pista', hours(sessions.reduce((a, x) => a + x.durationS, 0))],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className="bg-carbono-2 border border-grafito rounded-card px-5 py-4">
+                <div className="data text-[12px] tracking-[0.1em] text-niebla uppercase">{label}</div>
+                <div className="data text-[26px] font-bold mt-1.5">{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <section>
+            <h2 className="text-[18px] font-bold mb-1">Tu estilo de manejo</h2>
+            {style ? (
+              <>
+                <p className="text-[13px] text-niebla mb-3">
+                  Medido en {style.sessions === 1 ? 'la última sesión que abriste' : `las últimas ${style.sessions} sesiones que abriste`}
+                  {style.tentative ? ': todavía son pocos datos, tomalo como una tendencia.' : '.'}
+                </p>
+                <div className="bg-carbono-2 border border-grafito rounded-card divide-y divide-grafito">
+                  {style.traits.map((t) => (
+                    <Row
+                      key={t.id}
+                      icon={TRAIT_ICON[t.id]}
+                      title={t.title}
+                      sub={t.text}
+                      color={t.good === true ? 'var(--ftn-record)' : t.good === false ? 'var(--ftn-alerta)' : 'var(--ftn-acero)'}
+                      value={t.value}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-plata text-[14px] mt-2">Abrí una sesión con al menos dos vueltas válidas y acá aparece cómo frenás, acelerás y usás el grip.</p>
+            )}
+          </section>
+
+          {gaps.length > 0 && (
+            <div className="grid grid-cols-2 gap-5">
+              <section>
+                <h2 className="text-[18px] font-bold mb-1">Dónde ya sacás todo</h2>
+                <p className="text-[13px] text-niebla mb-3">Tu PB está pegado a tu vuelta ideal (tus mejores sectores).</p>
+                <div className="bg-carbono-2 border border-grafito rounded-card divide-y divide-grafito">
+                  {strengths.map(({ c, pb, gap }) => (
+                    <Row key={c.key} icon={TrendingUp} title={c.track} sub={c.car} color="var(--ftn-record)" value={<>{fmt.lapTime(pb)}<div className="text-[12px] text-record">{fmt.delta(gap, 3)} a la ideal</div></>} />
+                  ))}
+                </div>
+              </section>
+              <section>
+                <h2 className="text-[18px] font-bold mb-1">Dónde dejás tiempo</h2>
+                <p className="text-[13px] text-niebla mb-3">Ya hiciste cada sector más rápido: falta juntarlos en una vuelta.</p>
+                {weaknesses.length ? (
+                  <div className="bg-carbono-2 border border-grafito rounded-card divide-y divide-grafito">
+                    {weaknesses.map(({ c, pb, gap }) => (
+                      <Row key={c.key} icon={TrendingDown} title={c.track} sub={c.car} color="var(--ftn-alerta)" value={<>{fmt.lapTime(pb)}<div className="text-[12px] text-alerta">{fmt.delta(gap, 3)} a la ideal</div></>} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-plata text-[14px]">En ninguna combinación dejás más de 0,15 s contra tu ideal.</p>
+                )}
+              </section>
+            </div>
+          )}
+
+          {records.length > 0 && (
+            <section>
+              <h2 className="text-[18px] font-bold mb-3">Tus récords</h2>
               <div className="bg-carbono-2 border border-grafito rounded-card divide-y divide-grafito">
-                {style.traits.map((t) => (
+                {records.map((c) => (
                   <Row
-                    key={t.id}
-                    icon={TRAIT_ICON[t.id]}
-                    title={t.title}
-                    sub={t.text}
-                    color={t.good === true ? 'var(--ftn-record)' : t.good === false ? 'var(--ftn-alerta)' : 'var(--ftn-acero)'}
-                    value={t.value}
+                    key={c.key}
+                    icon={Trophy}
+                    title={c.track}
+                    sub={`${c.car} · ${SIM_LABEL[c.sim]}`}
+                    color="var(--ftn-mejor)"
+                    value={<span className="text-mejor">{fmt.lapTime(Math.min(...c.points.map((x) => x.bestS)))}</span>}
                   />
                 ))}
               </div>
-            </>
-          ) : (
-            <p className="text-plata text-[14px] mt-2">Abrí una sesión con al menos dos vueltas válidas y acá aparece cómo frenás, acelerás y usás el grip.</p>
+            </section>
           )}
-        </section>
-
-        {gaps.length > 0 && (
-          <div className="grid grid-cols-2 gap-5">
-            <section>
-              <h2 className="text-[18px] font-bold mb-1">Dónde ya sacás todo</h2>
-              <p className="text-[13px] text-niebla mb-3">Tu PB está pegado a tu vuelta ideal (tus mejores sectores).</p>
-              <div className="bg-carbono-2 border border-grafito rounded-card divide-y divide-grafito">
-                {strengths.map(({ c, pb, gap }) => (
-                  <Row key={c.key} icon={TrendingUp} title={c.track} sub={c.car} color="var(--ftn-record)" value={<>{fmt.lapTime(pb)}<div className="text-[12px] text-record">{fmt.delta(gap, 3)} a la ideal</div></>} />
-                ))}
-              </div>
-            </section>
-            <section>
-              <h2 className="text-[18px] font-bold mb-1">Dónde dejás tiempo</h2>
-              <p className="text-[13px] text-niebla mb-3">Ya hiciste cada sector más rápido: falta juntarlos en una vuelta.</p>
-              {weaknesses.length ? (
-                <div className="bg-carbono-2 border border-grafito rounded-card divide-y divide-grafito">
-                  {weaknesses.map(({ c, pb, gap }) => (
-                    <Row key={c.key} icon={TrendingDown} title={c.track} sub={c.car} color="var(--ftn-alerta)" value={<>{fmt.lapTime(pb)}<div className="text-[12px] text-alerta">{fmt.delta(gap, 3)} a la ideal</div></>} />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-plata text-[14px]">En ninguna combinación dejás más de 0,15 s contra tu ideal.</p>
-              )}
-            </section>
-          </div>
-        )}
-
-        {records.length > 0 && (
-          <section>
-            <h2 className="text-[18px] font-bold mb-3">Tus récords</h2>
-            <div className="bg-carbono-2 border border-grafito rounded-card divide-y divide-grafito">
-              {records.map((c) => (
-                <Row
-                  key={c.key}
-                  icon={Trophy}
-                  title={c.track}
-                  sub={`${c.car} · ${SIM_LABEL[c.sim]}`}
-                  color="var(--ftn-mejor)"
-                  value={<span className="text-mejor">{fmt.lapTime(Math.min(...c.points.map((x) => x.bestS)))}</span>}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
