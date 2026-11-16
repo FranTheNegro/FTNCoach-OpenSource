@@ -1,0 +1,45 @@
+{
+  "$schema": "../skin.schema.json",
+  "name": "WRC",
+  "short": "WRC",
+  "category": "rally",
+  "template": "tramo",
+  "colors": {
+    "background": "#0e0f12",
+    "panel": "#191b20",
+    "line": "#2c2f36",
+    "text": "#f5f6f8",
+    "muted": "#949aa5",
+    "accent": "#ff5a00",
+    "accent2": "#ffffff",
+    "label": "#ff5a00",
+    "number": "#f5f6f8",
+    "redline": "#ff3b30"
+  },
+  "fonts": {
+    "display": {
+      "family": "Archivo Variable",
+      "width": 110,
+      "weight": 800
+    },
+    "data": {
+      "family": "JetBrains Mono Variable",
+      "weight": 700
+    }
+  },
+  "labels": "tab",
+  "logo": "logo.png",
+  "credits": "Logo de WRC Promoter GmbH / FIA, usado sin fines de lucro, solo para fans. FTN Coach no tiene relación con WRC Promoter GmbH / FIA.",
+  "fields": [
+    "rpm",
+    "gear",
+    "speed",
+    "stage",
+    "splits",
+    "distance",
+    "warnings",
+    "fuel",
+    "map"
+  ],
+  "missing": "dash"
+}
