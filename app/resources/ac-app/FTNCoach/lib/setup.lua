@@ -13,6 +13,7 @@ local config = require('lib.config')
 local link = require('lib.link')
 local layout = require('lib.layout')
 local P = require('lib.presets')
+local skins = require('lib.skins')
 
 local M = {}
 local C = T.C
@@ -225,6 +226,41 @@ local function overlayPage(id)
   end
 end
 
+local function skinPage()
+  title('Skin')
+  muted('Colores, etiquetas y logo de la categoría en todos los overlays. Son las mismas skins que el dashboard de la tablet; los colores de los datos (mejor vuelta, récord, alertas) no cambian.')
+  section('Categoría')
+  local current = skins.current and skins.current.id or ''
+  local list = { { id = '', short = 'FTN', name = 'FTN Coach' } }
+  for _, sk in ipairs(skins.list) do list[#list + 1] = sk end
+  local cols = 4
+  local bw = (ui.availableSpaceX() - (cols - 1) * 8) / cols
+  for i, sk in ipairs(list) do
+    if (i - 1) % cols ~= 0 then ui.sameLine(0, 8) end
+    local on = sk.id == current
+    local accent = sk.colors and sk.colors.accent or T.C.azul
+    if button(sk.short .. '##skin' .. sk.id, vec2(bw, 44), on and accent or nil, on and T.C.carbono or nil) then skins.choose(sk.id) end
+    if ui.itemHovered() then ui.setTooltip(sk.name) end
+  end
+  if #skins.list == 0 then
+    ui.offsetCursorY(6)
+    muted('No se encontraron skins de categoría. Reinstalá la app desde FTN Coach (Ajustes → Assetto Corsa).')
+  end
+  if skins.current then
+    section('Logo')
+    local logo = skins.current.logo
+    if logo then
+      local size = ui.imageSize(logo)
+      local h = 48
+      local w = (size and size.y > 0) and h * size.x / size.y or 120
+      ui.image(logo, vec2(w, h))
+    else
+      muted('Esta skin todavía no tiene logo: se muestra la sigla.')
+    end
+    muted('Logos y marcas de cada categoría: usados sin fines de lucro, solo para fans.')
+  end
+end
+
 local function keysPage()
   title('Atajos')
   muted('Asignalos a una tecla o a un botón del volante.')
@@ -250,6 +286,7 @@ function M.center()
   if layout.needsOnboarding() then page = 'layout' end
   ui.childWindow('##nav', vec2(170, 0), false, function()
     navItem('layout', 'Layout')
+    navItem('skin', 'Skin')
     section('Overlays')
     for _, id in ipairs(P.IDS) do
       navItem(id, P.LABEL[id], not layout.isVisible(id))
@@ -261,6 +298,7 @@ function M.center()
   ui.sameLine(0, 12)
   ui.childWindow('##page', vec2(0, 0), false, function()
     if page == 'layout' then layoutPage()
+    elseif page == 'skin' then skinPage()
     elseif page == 'keys' then keysPage()
     elseif page == 'general' then
       title('General')

@@ -9,6 +9,8 @@ import { findAcRoot } from './analysis/track-map/ac'
 
 const BUNDLED = join(__dirname, '../../resources/ac-app/FTNCoach')
 const ICON = join(__dirname, '../../resources/icon.png')
+/** Skins por categoría: las mismas carpetas que usa el dashboard (app/skins). */
+const SKINS = join(__dirname, '../../skins')
 
 function versionOf(manifest: string): string | null {
   return /^\s*VERSION\s*=\s*(.+)$/m.exec(manifest)?.[1].trim() ?? null
@@ -45,6 +47,7 @@ export function installAcApp(): AcAppStatus {
   if (!root) throw new Error('No se encontró Assetto Corsa instalado')
   const dest = join(root, 'apps', 'lua', 'FTNCoach')
   copyDir(BUNDLED, dest)
+  if (existsSync(SKINS)) copyDir(SKINS, join(dest, 'skins'))
   if (existsSync(ICON)) writeFileSync(join(dest, 'icon.png'), readFileSync(ICON))
   return acAppStatus()
 }

@@ -3,7 +3,8 @@
 
   Overlays de telemetría en vivo con el diseño del dashboard de la tablet: coach,
   delta, tacómetro, inputs, tiempos, relative, neumáticos, auto, vueltas, mapa,
-  radar y banderas. Cada uno es una ventana; el layout de la categoría del auto
+  radar, banderas, torre de posiciones y banner del piloto. Las skins por categoría
+  (TC, TN, TCR, TP, F1, WRC) cambian colores, etiquetas y logo (lib/skins.lua). Cada uno es una ventana; el layout de la categoría del auto
   (Fórmula, GT, Turismo, Rally…) decide cuáles se ven y dónde (lib/layout.lua).
 
   Los datos en vivo salen de AC; FTN Coach en la PC suma lo que AC no da (delta
@@ -18,6 +19,8 @@ local link = require('lib.link')
 local live = require('lib.live')
 local layout = require('lib.layout')
 local setup = require('lib.setup')
+local standings = require('lib.standings')
+require('lib.skins')
 
 local overlays = {
   coach = require('overlays.coach'),
@@ -32,6 +35,8 @@ local overlays = {
   map = require('overlays.map'),
   radar = require('overlays.radar'),
   flags = require('overlays.flags'),
+  tower = require('overlays.tower'),
+  banner = require('overlays.banner'),
 }
 
 local now = 0
@@ -40,6 +45,7 @@ function script.update(dt)
   now = now + dt
   link.update(dt)
   live.update(dt)
+  standings.update(dt)
   layout.update(dt)
 end
 
@@ -100,6 +106,7 @@ end
 local NAMES = {
   coach = 'Coach', delta = 'Delta', tacho = 'Tacho', inputs = 'Inputs', timing = 'Timing', relative = 'Relative',
   tyres = 'Tyres', car = 'Car', laps = 'Laps', map = 'Map', radar = 'Radar', flags = 'Flags',
+  tower = 'Tower', banner = 'Banner',
 }
 for id, name in pairs(NAMES) do
   script['window' .. name] = window(id)

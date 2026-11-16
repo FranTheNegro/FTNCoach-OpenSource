@@ -12,6 +12,7 @@ M.s = ac.storage({
   units = 0, -- 0 = como en FTN Coach, 1 = métrico, 2 = imperial
   opacity = 0.88,
   accent = 1,
+  skin = '', -- skin de categoría ('' = FTN); las mismas que el dashboard
   -- Layout
   layoutAsked = false, -- ya se eligió en la bienvenida qué hacer con los layouts
   layoutAuto = true, -- según el auto (si no, siempre layoutFixed)
@@ -55,6 +56,13 @@ M.s = ac.storage({
   radarAuto = true,
   -- Banderas
   flagsLimiter = true,
+  -- Posiciones
+  towerRows = 12,
+  towerGap = 1, -- 1 = intervalo con el de adelante, 2 = distancia al líder
+  towerLaps = true, -- vuelta actual / total arriba de la torre
+  towerBest = true, -- marcar la mejor vuelta de la sesión
+  -- Piloto enfocado
+  bannerBest = true,
 })
 
 local s = M.s
@@ -157,6 +165,18 @@ end
 function SECTIONS.radar()
   slider('Alcance (m)', 'radarRange', 6, 30, '%.0f m', true)
   check('Mostrar solo cuando hay un auto cerca', 'radarAuto')
+end
+
+function SECTIONS.tower()
+  slider('Autos en la torre', 'towerRows', 5, 24, '%.0f', true)
+  ui.text('Distancia')
+  radios('towerGap', { { 'Con el de adelante', 1 }, { 'Con el líder', 2 } })
+  check('Vuelta actual y total arriba', 'towerLaps')
+  check('Marcar la mejor vuelta de la sesión', 'towerBest')
+end
+
+function SECTIONS.banner()
+  check('Mejor y última vuelta', 'bannerBest')
 end
 
 function SECTIONS.flags()

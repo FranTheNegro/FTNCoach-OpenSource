@@ -31,6 +31,8 @@ M.SIZE = {
   map = { 300, 300 },
   radar = { 220, 220 },
   flags = { 420, 56 },
+  tower = { 300, 330 },
+  banner = { 420, 74 },
 }
 
 -- Nombre de cada ventana en la barra de apps (el NAME del manifest); la principal es el centro de control
@@ -48,9 +50,11 @@ M.TITLE = {
   map = 'FTN Coach · Mapa',
   radar = 'FTN Coach · Radar',
   flags = 'FTN Coach · Banderas',
+  tower = 'FTN Coach · Posiciones',
+  banner = 'FTN Coach · Piloto',
 }
 
-M.IDS = { 'coach', 'delta', 'tacho', 'inputs', 'timing', 'relative', 'tyres', 'car', 'laps', 'map', 'radar', 'flags' }
+M.IDS = { 'coach', 'delta', 'tacho', 'inputs', 'timing', 'relative', 'tyres', 'car', 'laps', 'map', 'radar', 'flags', 'tower', 'banner' }
 
 -- Qué muestra cada overlay (en el centro de control)
 M.DESC = {
@@ -66,11 +70,14 @@ M.DESC = {
   map = 'Mapa oficial del circuito con todos los autos.',
   radar = 'Autos alrededor vistos desde arriba; aparece cuando alguien se acerca.',
   flags = 'Banderas y limitador de boxes; aparece solo cuando hace falta.',
+  tower = 'Torre de posiciones con gap o intervalo, mejor vuelta y boxes; los cambios de puesto se animan.',
+  banner = 'El piloto que sigue la cámara: puesto, número, nombre, vuelta y sus tiempos.',
 }
 
 M.LABEL = {
   coach = 'Coach', delta = 'Delta', tacho = 'Tacómetro', inputs = 'Inputs', timing = 'Tiempos', relative = 'Relative',
   tyres = 'Neumáticos', car = 'Auto', laps = 'Vueltas', map = 'Mapa', radar = 'Radar', flags = 'Banderas',
+  tower = 'Posiciones', banner = 'Piloto',
 }
 
 -- Debajo del espejo virtual de AC (arriba al centro)
@@ -99,6 +106,7 @@ M.CATEGORIES = {
       tyres = { at = 'bl', k = 0.8 },
       map = { at = 'bl', y = 212, k = 0.75 },
       radar = { at = 'mc', y = 80 },
+      tower = { at = 'ml', y = -70, k = 0.75, only = 'race' },
     },
   },
   {
@@ -118,6 +126,7 @@ M.CATEGORIES = {
       map = { at = 'bl', y = 212, k = 0.7 },
       inputs = { at = 'bc', k = 0.85, only = 'practice' },
       radar = { at = 'mc', y = 80 },
+      tower = { at = 'ml', y = -70, k = 0.75, only = 'race' },
     },
   },
   {
@@ -137,6 +146,7 @@ M.CATEGORIES = {
       tyres = { at = 'bl', k = 0.8 },
       inputs = { at = 'bc', k = 0.85, only = 'practice' },
       radar = { at = 'mc', y = 80 },
+      tower = { at = 'ml', y = 180, k = 0.75, only = 'race' },
     },
   },
   {
@@ -155,6 +165,7 @@ M.CATEGORIES = {
       car = { at = 'br', k = 0.8 },
       tyres = { at = 'bl', k = 0.7 },
       inputs = { at = 'bl', y = 187, k = 0.8, only = 'practice' },
+      tower = { at = 'ml', y = 40, k = 0.85, only = 'race' },
     },
   },
   {

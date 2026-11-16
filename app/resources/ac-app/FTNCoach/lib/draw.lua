@@ -81,9 +81,26 @@ function D.text(str, size, x, y, w, h, color, font, ha, va, wrap)
   ui.popDWriteFont()
 end
 
---- Etiqueta chica en mayúsculas (como las del dashboard).
+--- Etiqueta chica en mayúsculas (como las del dashboard). Con una skin de
+--- categoría toma su color y su estilo: subrayada con quiebre o en pestaña.
 function D.label(str, x, y, w, color, ha)
-  D.text(str, 10, x, y, w, 14, color or T.C.niebla, T.F.semi, ha or 'l', 'c')
+  local sk = T.SK
+  if color or not sk or sk.labels == 'plain' then
+    D.text(str, 10, x, y, w, 14, color or (sk and sk.label) or T.C.niebla, T.F.semi, ha or 'l', 'c')
+    return
+  end
+  ui.pushDWriteFont(T.F.semi)
+  local tw = ui.measureDWriteText(str, 10 * s).x / s
+  ui.popDWriteFont()
+  local x0 = (ha == 'r') and (x + w - tw) or (ha == 'c') and (x + (w - tw) / 2) or x
+  if sk.labels == 'tab' then
+    D.rect(x0 - 4, y, tw + 8, 14, sk.label, 3)
+    D.text(str, 10, x0, y, tw, 14, T.C.carbono, T.F.semi, 'l', 'c')
+  else
+    D.text(str, 10, x0, y - 1, tw, 14, sk.label, T.F.semi, 'l', 'c')
+    D.line(x0, y + 14, x0 + tw + 8, y + 14, sk.label, 1.5)
+    D.line(x0 + tw + 8, y + 14, x0 + tw + 12, y + 18, sk.label, 1.5)
+  end
 end
 
 --- Barra de progreso horizontal 0..1.

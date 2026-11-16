@@ -34,6 +34,8 @@ M.ACCENTS = {
 }
 
 function M.accent(i)
+  -- Con una skin de categoría manda su color
+  if M.SK then return M.SK.accent end
   local a = M.ACCENTS[math.floor(i or 1)] or M.ACCENTS[1]
   return hex(a[2])
 end

@@ -8,6 +8,7 @@ files:
   - out/**
   - resources/icon.png
   - resources/ac-app/**
+  - skins/**
   - package.json
 # koffi carga su binario nativo desde disco: no puede quedar dentro del asar
 asarUnpack:
