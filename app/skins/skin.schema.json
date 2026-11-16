@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Skin de FTN Coach",
+  "description": "Skin por categoría para el dashboard de la tablet y los overlays de Assetto Corsa. Solo presentación: los datos son siempre los de la telemetría.",
+  "type": "object",
+  "required": ["name"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": { "type": "string", "description": "Nombre visible (\"Turismo Carretera\")." },
+    "short": { "type": "string", "maxLength": 4, "description": "Sigla para el selector y cuando no hay logo (\"TC\")." },
+    "category": {
+      "enum": ["formula", "gt", "proto", "turismo", "oval", "rally", "drift", "calle", null],
+      "description": "Categoría de auto para la que está pensada."
+    },
+    "template": {
+      "enum": ["arco", "barra", "tramo"],
+      "description": "arco: tacómetro en arco con la marcha al centro. barra: luces de cambio arriba y marcha grande. tramo: rally (tiempo de tramo, parciales, distancia y avisos)."
+    },
+    "colors": {
+      "type": "object",
+      "description": "Colores en hexadecimal (#rrggbb). Los que falten toman el valor de FTN.",
+      "additionalProperties": false,
+      "properties": {
+        "background": { "$ref": "#/definitions/hex", "description": "Fondo de la pantalla." },
+        "panel": { "$ref": "#/definitions/hex", "description": "Fondo de los paneles." },
+        "line": { "$ref": "#/definitions/hex", "description": "Bordes y separadores." },
+        "text": { "$ref": "#/definitions/hex", "description": "Texto principal." },
+        "muted": { "$ref": "#/definitions/hex", "description": "Texto secundario." },
+        "accent": { "$ref": "#/definitions/hex", "description": "Color de la categoría: tacómetro, barras, tu auto." },
+        "accent2": { "$ref": "#/definitions/hex", "description": "Segundo color de la categoría." },
+        "label": { "$ref": "#/definitions/hex", "description": "Etiquetas de los datos." },
+        "number": { "$ref": "#/definitions/hex", "description": "Números de los datos." },
+        "redline": { "$ref": "#/definitions/hex", "description": "Zona roja del tacómetro y últimas luces de cambio." }
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "display": { "$ref": "#/definitions/font", "description": "Marcha, posición y títulos." },
+        "data": { "$ref": "#/definitions/font", "description": "Números de los datos." }
+      }
+    },
+    "labels": {
+      "enum": ["underline", "plain", "tab"],
+      "description": "underline: subrayada con quiebre. plain: solo texto. tab: pestaña de color."
+    },
+    "logo": {
+      "type": ["string", "null"],
+      "description": "Archivo del logo dentro de la carpeta: PNG con fondo transparente (AC no dibuja SVG)."
+    },
+    "fields": {
+      "type": "array",
+      "description": "Bloques que se muestran. En pantallas chicas se caen el minimapa y la tabla.",
+      "items": {
+        "enum": ["rpm", "gear", "speed", "lap", "best", "position", "laps", "gap", "fuel", "map", "standings", "stage", "splits", "distance", "warnings"]
+      }
+    },
+    "missing": {
+      "enum": ["dash", "hide"],
+      "description": "Si el simulador no da un dato: mostrar \"–\" o esconder el bloque."
+    },
+    "credits": { "type": "string", "description": "Aclaración sobre marcas de terceros (se muestra en el selector)." }
+  },
+  "definitions": {
+    "hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "font": {
+      "type": "object",
+      "required": ["family"],
+      "additionalProperties": false,
+      "properties": {
+        "family": { "type": "string" },
+        "file": { "type": "string", "description": "Archivo dentro de la carpeta (.ttf u .otf; .woff2 solo en el dashboard). Sin archivo se usa la fuente de FTN." },
+        "weight": { "type": "number", "minimum": 100, "maximum": 900 },
+        "width": { "type": "number", "minimum": 62, "maximum": 125, "description": "Ancho de la display de FTN (Archivo): 62 condensada, 125 expandida." },
+        "italic": { "type": "boolean" }
+      }
+    }
+  }
+}

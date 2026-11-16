@@ -105,13 +105,25 @@ elige en *Ajustes → Coach*:
 Las API keys se guardan cifradas en la PC. Los modelos gratis de OpenCode solo
 funcionan dentro de OpenCode, por eso no aparecen.
 
+### Skins por categoría
+
+El dashboard y los overlays de AC tienen skins de TC, TN, TCR, Turismo Pista, F1 y
+WRC, con el estilo de FTN y los colores y el logo de cada categoría. En la tablet se
+eligen con el botón que está al lado del simulador, arriba; en AC, en la página
+*Skin* del centro de control. Cada pantalla recuerda la última elegida. Las de
+circuito muestran rpm, marcha, velocidad, vuelta, mejor vuelta con delta, posición,
+vueltas, gap, nafta, minimapa y una mini tabla de posiciones; la de WRC muestra el
+tramo (tiempo, parciales, distancia y avisos).
+
 ### App dentro de Assetto Corsa
 
 Con Custom Shaders Patch instalado, *Ajustes → Assetto Corsa → Instalar* copia una
 app Lua al juego: delta, última y mejor vuelta, combustible y el consejo para la
 próxima curva, sacado de tus sesiones anteriores en ese circuito y con ese auto.
-Se activa en la barra de apps de AC. No es obligatoria: la telemetría se lee igual
-sin ella.
+Suma una torre de posiciones (gap o intervalo, mejor vuelta y boxes, con los
+cambios de puesto animados) y un banner del piloto que sigue la cámara. La torre
+también le pasa a la tablet a los demás autos, que AC no publica. Se activa en la
+barra de apps de AC. No es obligatoria: la telemetría se lee igual sin ella.
 
 Para probar sin correr: *En vivo → Probar sin el simulador* reproduce una sesión
 grabada de iRacing (`.ibt`) como si estuvieras en pista.
@@ -176,16 +188,86 @@ src/
 ```
 
 Cualquier dashboard puede conectarse a `ws://<ip>:8090/ws` y recibir mensajes JSON
-`hello`, `status`, `meta`, `laps` y `frame` (ver `src/shared/live.ts`). Además:
+`hello`, `status`, `meta`, `laps`, `frame` y `standings` (ver `src/shared/live.ts`).
+Además:
 
 - `GET /api/track-map?id=<trackId>&slug=<trackSlug>`: mapa del circuito en metros
   (ver `TrackGeometry` en `src/shared/analysis.ts`).
 - `GET /api/ingame`: resumen para la app de AC (delta, vueltas, combustible y
   consejos por curva).
+- `POST /api/ac/standings`: la app de AC manda la clasificación de todos los autos
+  (solo se acepta desde la misma PC).
 
-La app de Assetto Corsa está en `resources/ac-app/FTNCoach`.
+La app de Assetto Corsa está en `resources/ac-app/FTNCoach` y las skins en `skins/`.
 
 ### Fuentes
 
 Se usan las alternativas OFL del manual de marca (Archivo, Hanken Grotesk,
 JetBrains Mono). Las fuentes comerciales del manual no se distribuyen.
+
+## Crear una skin
+
+Cada skin es una carpeta en `app/skins/<id>/` y la usan el dashboard de la tablet y
+los overlays de Assetto Corsa. Una skin cambia solo la presentación: no calcula
+nada, y si el simulador no da un dato el bloque muestra "–" o se esconde.
+
+```
+app/skins/
+├── skin.schema.json     esquema (el editor autocompleta y avisa errores)
+└── mi-categoria/
+    ├── skin.json        nombre, colores, tipografías, plantilla y campos
+    ├── logo.png         logo con fondo transparente (opcional)
+    └── fuente.ttf       tipografía propia (opcional)
+```
+
+1. Copiá una carpeta parecida a lo que buscás (`tc` para arco, `f1` para barra, `wrc`
+   para rally) y cambiale el nombre. El nombre de la carpeta es el id: minúsculas y
+   sin espacios.
+2. Editá `skin.json`:
+
+   ```json
+   {
+     "$schema": "../skin.schema.json",
+     "name": "Top Race",
+     "short": "TR",
+     "category": "turismo",
+     "template": "arco",
+     "colors": {
+       "background": "#0d0f13", "panel": "#171a20", "line": "#2a2f38",
+       "text": "#f0f3fa", "muted": "#8e96a3",
+       "accent": "#00c2ff", "accent2": "#ffffff",
+       "label": "#00c2ff", "number": "#f0f3fa", "redline": "#ff3b30"
+     },
+     "fonts": { "display": { "family": "Archivo Variable", "width": 90, "weight": 800, "italic": true } },
+     "labels": "underline",
+     "logo": "logo.png",
+     "fields": ["rpm", "gear", "speed", "lap", "best", "position", "laps", "gap", "fuel", "map", "standings"],
+     "missing": "dash"
+   }
+   ```
+
+   - `template`: `arco` (tacómetro en arco), `barra` (luces de cambio y marcha
+     grande) o `tramo` (rally).
+   - `fields`: qué bloques se ven. Circuito: `rpm`, `gear`, `speed`, `lap`, `best`,
+     `position`, `laps`, `gap`, `fuel`, `map`, `standings`. Rally: `stage`,
+     `splits`, `distance`, `warnings` (más `rpm`, `gear`, `speed`, `fuel`, `map`).
+   - `labels`: `underline`, `plain` o `tab`.
+   - Lo que falte o esté mal escrito toma el valor de FTN, así una skin a medio
+     hacer no rompe nada.
+3. Logo: PNG con fondo transparente, de unos 600 px de ancho y claro sobre fondo
+   oscuro. El dashboard también acepta SVG, pero AC no.
+4. Tipografías: sin archivo se usan las de FTN (Archivo admite `width` de 62 a 125).
+   Con `file` se carga la de la carpeta; tiene que tener una licencia que permita
+   redistribuirla (OFL, por ejemplo).
+5. Probala: `npm run dev` levanta el dashboard en `http://<tu-ip>:8090`, y la skin
+   aparece sola en el selector. Para AC, reinstalá la app desde *Ajustes → Assetto
+   Corsa* y elegila en la página *Skin* del centro de control.
+6. Mandá un pull request con la carpeta.
+
+Los colores de dato (mejor vuelta en violeta, récord en verde, alerta en ámbar,
+error en rojo) no cambian con la skin, porque dicen algo del dato.
+
+**Logos y marcas.** Los logos de las categorías pertenecen a sus dueños (ACTC,
+APAT, TCR/WSC, Formula One Group, WRC/FIA, etc.). Se incluyen sin fines de lucro y
+solo para fans; FTN Coach no tiene relación con esas organizaciones. Si sos dueño
+de una marca y querés que la saquemos, abrí un issue.
