@@ -1,0 +1,48 @@
+{
+  "$schema": "../skin.schema.json",
+  "name": "Turismo Nacional",
+  "short": "TN",
+  "category": "turismo",
+  "template": "arco",
+  "colors": {
+    "background": "#0c1016",
+    "panel": "#151b24",
+    "line": "#26303d",
+    "text": "#f0f3fa",
+    "muted": "#8e9aab",
+    "accent": "#5cc8ff",
+    "accent2": "#ffffff",
+    "label": "#5cc8ff",
+    "number": "#f0f3fa",
+    "redline": "#ff4d4d"
+  },
+  "fonts": {
+    "display": {
+      "family": "Archivo Variable",
+      "width": 88,
+      "weight": 800,
+      "italic": true
+    },
+    "data": {
+      "family": "JetBrains Mono Variable",
+      "weight": 700
+    }
+  },
+  "labels": "underline",
+  "logo": null,
+  "credits": "Logo de la APAT, usado sin fines de lucro, solo para fans. FTN Coach no tiene relación con la APAT.",
+  "fields": [
+    "rpm",
+    "gear",
+    "speed",
+    "lap",
+    "best",
+    "position",
+    "laps",
+    "gap",
+    "fuel",
+    "map",
+    "standings"
+  ],
+  "missing": "dash"
+}
