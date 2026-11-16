@@ -1,0 +1,48 @@
+{
+  "$schema": "../skin.schema.json",
+  "name": "TCR",
+  "short": "TCR",
+  "category": "turismo",
+  "template": "barra",
+  "colors": {
+    "background": "#0b0b0d",
+    "panel": "#17171b",
+    "line": "#2d2d33",
+    "text": "#f5f5f7",
+    "muted": "#93939c",
+    "accent": "#e4002b",
+    "accent2": "#ffffff",
+    "label": "#c9c9d1",
+    "number": "#f5f5f7",
+    "redline": "#e4002b"
+  },
+  "fonts": {
+    "display": {
+      "family": "Archivo Variable",
+      "width": 112,
+      "weight": 900,
+      "italic": true
+    },
+    "data": {
+      "family": "JetBrains Mono Variable",
+      "weight": 700
+    }
+  },
+  "labels": "tab",
+  "logo": null,
+  "credits": "Logo de TCR / WSC, usado sin fines de lucro, solo para fans. FTN Coach no tiene relación con TCR / WSC.",
+  "fields": [
+    "rpm",
+    "gear",
+    "speed",
+    "lap",
+    "best",
+    "position",
+    "laps",
+    "gap",
+    "fuel",
+    "map",
+    "standings"
+  ],
+  "missing": "dash"
+}
