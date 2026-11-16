@@ -14,7 +14,9 @@ import { Live } from './v2/Live'
 import { Rivals } from './v2/Rivals'
 import { SessionStrip } from './v2/SessionStrip'
 import { C, Chip, Ico, Stage } from './v2/kit'
-import { applySkin, layoutFor, LAYOUT_IDS, LAYOUTS, SKIN_IDS, SKINS } from './v2/layouts'
+import { layoutFor, LAYOUT_IDS, LAYOUTS } from './v2/layouts'
+import { CategoryLive } from './v2/CategoryLive'
+import { applySkin, SKIN_LIST, skinById } from './skins'
 import { DashTracker } from './v2/tracker'
 
 const PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
@@ -58,11 +60,13 @@ export function App() {
   const live = useLive(client)
   const [prefs, setPrefs] = usePrefs()
   const [menu, setMenu] = useState(false)
+  const [skinMenu, setSkinMenu] = useState(false)
   const [keepAwake, setKeepAwake] = useState(true)
   const wakeSupported = useWakeLock(keepAwake)
   const swipe = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => applySkin(prefs.skin), [prefs.skin])
+  const skin = skinById(prefs.skin)
 
   const f = live.frame
   const status = live.status
@@ -133,6 +137,18 @@ export function App() {
         <div className="d2-sim" role="img" aria-label={simName} title={simName}>
           <Ico icon={connectedToSim ? Plug : Unplug} size={20} color={connectedToSim ? C.record : live.connected ? C.alerta : C.niebla} />
         </div>
+        <button
+          className="d2-skinbtn"
+          onClick={() => {
+            setSkinMenu((m) => !m)
+            setMenu(false)
+          }}
+          aria-label={`Skin: ${skin.name}`}
+          aria-expanded={skinMenu}
+        >
+          {skin.logoUrl ? <img src={skin.logoUrl} alt="" /> : <i className="menu-swatch" style={{ background: skin.swatch[0], borderColor: skin.swatch[1] }} />}
+          <span>{skin.kind === 'ftn' ? skin.name : skin.short}</span>
+        </button>
         <div className="d2-who">
           {connectedToSim && meta && (
             <>
@@ -153,7 +169,14 @@ export function App() {
         </div>
         <SessionStrip f={connectedToSim ? f : null} meta={connectedToSim ? meta : null} units={prefs.units} />
         <div className="d2-head-right">
-          <button className="d2-iconbtn" onClick={() => setMenu((m) => !m)} aria-label="Opciones">
+          <button
+            className="d2-iconbtn"
+            onClick={() => {
+              setMenu((m) => !m)
+              setSkinMenu(false)
+            }}
+            aria-label="Opciones"
+          >
             <Ico icon={Ellipsis} size={22} />
           </button>
           <button className="d2-iconbtn" onClick={toggleFullscreen} aria-label="Pantalla completa">
@@ -168,7 +191,10 @@ export function App() {
         onPointerUp={onPointerUp}
         onPointerCancel={() => (swipe.current = null)}
       >
-        {f && prefs.page === 'live' && <Live f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} history={client.history} layout={layout} panels={prefs.panels} onPanel={(id, i) => setPrefs({ panels: { ...prefs.panels, [id]: i } })} />}
+        {f && prefs.page === 'live' && skin.manifest && (
+          <CategoryLive skin={skin.manifest} logoUrl={skin.logoUrl} f={f} meta={meta} laps={live.laps} standings={live.standings} units={prefs.units} tracker={tracker} />
+        )}
+        {f && prefs.page === 'live' && !skin.manifest && <Live f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} history={client.history} layout={layout} panels={prefs.panels} onPanel={(id, i) => setPrefs({ panels: { ...prefs.panels, [id]: i } })} />}
         {f && prefs.page === 'car' && <Car f={f} meta={meta} units={prefs.units} />}
         {f && prefs.page === 'laps' && <Laps f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} />}
         {f && prefs.page === 'rivals' && <Rivals f={f} meta={meta} tracker={tracker} />}
@@ -216,32 +242,55 @@ export function App() {
             <span>Pantalla siempre encendida</span>
             <span>{!wakeSupported ? 'Configurala en la tablet' : keepAwake ? 'Sí' : 'No'}</span>
           </button>
-          <div className="menu-section">
-            <span className="menu-title">Layout de En vivo</span>
-            <button onClick={() => setPrefs({ layoutAuto: !prefs.layoutAuto, layout })}>
-              <span>Automático según el auto</span>
-              <span>{prefs.layoutAuto ? `Sí · ${LAYOUTS[detected].name}` : 'No'}</span>
-            </button>
-            <div className="menu-choices">
-              {LAYOUT_IDS.map((id) => (
-                <button key={id} aria-pressed={layout === id} onClick={() => setPrefs({ layoutAuto: false, layout: id })} title={LAYOUTS[id].hint}>
-                  {LAYOUTS[id].name}
-                </button>
-              ))}
+          {skin.kind === 'ftn' && (
+            <div className="menu-section">
+              <span className="menu-title">Layout de En vivo</span>
+              <button onClick={() => setPrefs({ layoutAuto: !prefs.layoutAuto, layout })}>
+                <span>Automático según el auto</span>
+                <span>{prefs.layoutAuto ? `Sí · ${LAYOUTS[detected].name}` : 'No'}</span>
+              </button>
+              <div className="menu-choices">
+                {LAYOUT_IDS.map((id) => (
+                  <button key={id} aria-pressed={layout === id} onClick={() => setPrefs({ layoutAuto: false, layout: id })} title={LAYOUTS[id].hint}>
+                    {LAYOUTS[id].name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="menu-section">
-            <span className="menu-title">Skin</span>
-            <div className="menu-choices">
-              {SKIN_IDS.map((id) => (
-                <button key={id} aria-pressed={prefs.skin === id} onClick={() => setPrefs({ skin: id })}>
-                  <i className="menu-swatch" style={{ background: SKINS[id].vars['--ftn-carbono-2'] ?? '#1e2229', borderColor: SKINS[id].vars['--ftn-acero'] ?? '#3a404b' }} />
-                  {SKINS[id].name}
-                </button>
-              ))}
-            </div>
-          </div>
+          )}
           <button onClick={() => setMenu(false)}>
+            <span>Cerrar</span>
+            <span />
+          </button>
+        </div>
+      )}
+
+      {skinMenu && (
+        <div className="menu skin-menu" role="menu">
+          <div className="menu-section">
+            <span className="menu-title">Categorías</span>
+            <div className="skin-grid">
+              {SKIN_LIST.filter((x) => x.kind === 'category').map((x) => (
+                <button key={x.id} aria-pressed={prefs.skin === x.id} onClick={() => setPrefs({ skin: x.id })} title={x.name} style={{ ['--sw-bg' as string]: x.swatch[0], ['--sw-ac' as string]: x.swatch[1] }}>
+                  {x.logoUrl ? <img src={x.logoUrl} alt="" /> : <b>{x.short}</b>}
+                  <span>{x.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="menu-section">
+            <span className="menu-title">FTN</span>
+            <div className="menu-choices">
+              {SKIN_LIST.filter((x) => x.kind === 'ftn').map((x) => (
+                <button key={x.id} aria-pressed={prefs.skin === x.id} onClick={() => setPrefs({ skin: x.id })}>
+                  <i className="menu-swatch" style={{ background: x.swatch[0], borderColor: x.swatch[1] }} />
+                  {x.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          {skin.manifest?.credits && <p className="skin-credits">{skin.manifest.credits}</p>}
+          <button onClick={() => setSkinMenu(false)}>
             <span>Cerrar</span>
             <span />
           </button>

@@ -12,7 +12,7 @@ import type { DashTracker } from './tracker'
 const SECTOR_COLOR = { best: C.mejor, close: C.blanco, slow: C.alerta } as const
 
 /** Mapa del trazado del servidor de FTN Coach (se pide una vez por trazado). */
-function useTrackMap(meta: SessionMeta | null): TrackMapResult | null {
+export function useTrackMap(meta: SessionMeta | null): TrackMapResult | null {
   const [map, setMap] = useState<TrackMapResult | null>(null)
   const id = meta?.trackId ?? null
   const slug = meta?.trackSlug ?? null

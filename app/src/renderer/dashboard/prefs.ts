@@ -1,7 +1,8 @@
 /** Preferencias de cada dispositivo (la tablet puede usar mph aunque la PC use km/h). */
 import { useCallback, useState } from 'react'
 import type { Units } from '@shared/api'
-import { LAYOUT_IDS, SKIN_IDS, type LayoutId, type SkinId } from './v2/layouts'
+import { LAYOUT_IDS, type LayoutId } from './v2/layouts'
+import { ALL_SKIN_IDS } from './skins'
 
 export const PAGE_IDS = ['live', 'car', 'laps', 'rivals', 'inputs', 'map'] as const
 export type PageId = (typeof PAGE_IDS)[number]
@@ -13,7 +14,8 @@ export interface Prefs {
   layoutAuto: boolean
   /** Layout elegido a mano (cuando no es automático). */
   layout: LayoutId
-  skin: SkinId
+  /** Skin elegida (de color FTN o de categoría); se recuerda en cada dispositivo. */
+  skin: string
   /** Qué panel muestra cada zona alternable de "En vivo". */
   panels: Record<string, number>
 }
@@ -34,7 +36,7 @@ function load(): Prefs {
       ...stored,
       page: pick(PAGE_IDS, stored.page, DEFAULTS.page),
       layout: pick(LAYOUT_IDS, stored.layout, DEFAULTS.layout),
-      skin: pick(SKIN_IDS, stored.skin, DEFAULTS.skin),
+      skin: pick(ALL_SKIN_IDS, stored.skin, DEFAULTS.skin),
       layoutAuto: typeof stored.layoutAuto === 'boolean' ? stored.layoutAuto : DEFAULTS.layoutAuto,
       panels: stored.panels && typeof stored.panels === 'object' ? stored.panels : DEFAULTS.panels,
     }

@@ -192,7 +192,7 @@ function adviceOf(f: LiveFrame, units: Units): Advice {
 
 const GRADE_COLOR = { best: C.mejor, close: C.blanco, slow: C.alerta } as const
 
-function Sector({ s }: { s: SectorState }) {
+export function Sector({ s }: { s: SectorState }) {
   const color = s.state === 'live' ? C.azul : s.state === 'done' ? GRADE_COLOR[s.grade ?? 'close'] : C.niebla
   const tag = s.state === 'live' ? 'EN CURSO' : s.state === 'done' ? (s.grade === 'best' ? 'MEJOR' : s.diffS !== null ? signed(s.diffS, 2) : '') : ''
   return (
@@ -497,26 +497,30 @@ function RacePanel({ c }: { c: Ctx }) {
   )
 }
 
+/** Parciales del tramo (ACR: los del juego contra tu mejor pasada; si no, los sectores del sim). */
+export function stageSectors(f: LiveFrame, tracker: DashTracker): SectorState[] {
+  const st = f.stage ?? null
+  if (!st) return tracker.sectors(f)
+  return st.splits.map((s, k) => {
+    const from = k ? st.splits[k - 1].distM : 0
+    const reached = s.timeS !== null
+    const live = !reached && st.state === 'running' && (k === 0 || st.splits[k - 1].timeS !== null)
+    return {
+      name: `P${k + 1}`,
+      timeS: reached ? s.timeS : live ? f.lapTimeS : null,
+      state: reached ? 'done' : live ? 'live' : 'idle',
+      grade: !reached ? null : s.best ? 'best' : s.diffS !== null && s.diffS <= 0.12 ? 'close' : 'slow',
+      diffS: s.diffS,
+      progress: reached ? 1 : live ? clamp((st.distM - from) / Math.max(1, s.distM - from), 0, 1) : 0,
+    }
+  })
+}
+
 /** Rally: tiempo del tramo, cuánto falta y los parciales. */
 function StagePanel({ c }: { c: Ctx }) {
   const { f, meta, tracker, delta, deltaColor } = c
   const st = f.stage ?? null
-  // ACR: parciales del tramo guardado (tiempo acumulado a cada parcial, contra tu mejor pasada)
-  const sectors: SectorState[] = st
-    ? st.splits.map((s, k) => {
-        const from = k ? st.splits[k - 1].distM : 0
-        const reached = s.timeS !== null
-        const live = !reached && st.state === 'running' && (k === 0 || st.splits[k - 1].timeS !== null)
-        return {
-          name: `P${k + 1}`,
-          timeS: reached ? s.timeS : live ? f.lapTimeS : null,
-          state: reached ? 'done' : live ? 'live' : 'idle',
-          grade: !reached ? null : s.best ? 'best' : s.diffS !== null && s.diffS <= 0.12 ? 'close' : 'slow',
-          diffS: s.diffS,
-          progress: reached ? 1 : live ? clamp((st.distM - from) / Math.max(1, s.distM - from), 0, 1) : 0,
-        }
-      })
-    : tracker.sectors(f)
+  const sectors = stageSectors(f, tracker)
   const pct = clamp(f.lapPct, 0, 1)
   const lengthM = st?.lengthM ?? meta?.trackLengthM ?? null
   const leftM = lengthM ? (st ? Math.max(0, lengthM - st.distM) : (1 - pct) * lengthM) : null

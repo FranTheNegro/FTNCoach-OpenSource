@@ -1,0 +1,553 @@
+/*
+ * Skins de categoría: "En vivo" con las variables --sk-* que pone skins.ts.
+ * Escenario de 1280 × 800 (Tab S9 FE en horizontal). En pantallas chicas (7")
+ * se caen el minimapa y la tabla, y lo principal queda más grande.
+ */
+
+.sk-live {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  height: 100%;
+}
+
+/* ── Plantillas ── */
+
+.sk-arco {
+  grid-template-columns: 290px minmax(0, 1fr) 290px;
+  grid-template-rows: repeat(3, minmax(0, 1fr)) minmax(0, 1.8fr);
+  grid-template-areas:
+    'best tach lap'
+    'laps tach position'
+    'gap  tach fuel'
+    'map  tach standings';
+}
+
+.sk-barra {
+  grid-template-columns: 300px minmax(0, 1fr) 290px;
+  grid-template-rows: 46px repeat(4, minmax(0, 1fr));
+  grid-template-areas:
+    'lights    lights lights'
+    'standings gear   position'
+    'standings gear   gap'
+    'standings lap    laps'
+    'map       best   fuel';
+}
+
+.sk-tramo {
+  grid-template-columns: 330px minmax(0, 1fr) 330px;
+  grid-template-rows: 46px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr);
+  grid-template-areas:
+    'lights lights lights'
+    'stage  gear   distance'
+    'fuel   gear   warnings'
+    'splits splits map';
+}
+
+@media (max-width: 1100px), (max-height: 680px) {
+  .sk-live [data-area='map'],
+  .sk-live [data-area='standings'] {
+    display: none;
+  }
+  .sk-arco {
+    grid-template-columns: 300px minmax(0, 1fr) 300px;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      'best tach lap'
+      'laps tach position'
+      'gap  tach fuel';
+  }
+  .sk-barra {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
+    grid-template-rows: 46px repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      'lights lights lights'
+      'lap    gear   position'
+      'best   gear   gap'
+      'laps   gear   fuel';
+  }
+  .sk-tramo {
+    grid-template-areas:
+      'lights lights lights'
+      'stage  gear   distance'
+      'fuel   gear   warnings'
+      'splits splits splits';
+  }
+  .sk-live .sk-num {
+    font-size: 50px;
+  }
+}
+
+/* ── Bloques ── */
+
+.sk-field,
+.sk-map,
+.sk-standings,
+.sk-tach,
+.sk-gearblock {
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--ftn-radius-card);
+  background: var(--ftn-carbono-2);
+  border: 1px solid var(--ftn-grafito);
+}
+
+.sk-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 16px;
+  overflow: hidden;
+}
+
+.sk-num {
+  font-family: var(--sk-font-data);
+  font-weight: var(--sk-data-weight);
+  font-style: var(--sk-data-style);
+  font-variant-numeric: tabular-nums;
+  font-size: 44px;
+  line-height: 1;
+  color: var(--sk-number);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sk-field.big .sk-num {
+  font-family: var(--sk-font-display);
+  font-variation-settings: 'wdth' var(--sk-display-wdth);
+  font-weight: var(--sk-display-weight);
+  font-style: var(--sk-display-style);
+  font-size: 68px;
+}
+
+.sk-sub {
+  font-family: var(--ftn-font-data);
+  font-size: 13px;
+  color: var(--ftn-niebla);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Etiquetas: tres estilos que elige la skin */
+.sk-lbl {
+  align-self: flex-start;
+  position: relative;
+  font-family: var(--ftn-font-ui);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sk-label);
+}
+
+/* Subrayada con quiebre al final (como los tableros de TC y TN) */
+[data-skin-labels='underline'] .sk-lbl {
+  padding: 0 18px 4px 2px;
+  font-style: oblique 8deg;
+  border-bottom: 2px solid var(--sk-label);
+}
+[data-skin-labels='underline'] .sk-lbl::after {
+  content: '';
+  position: absolute;
+  right: -9px;
+  bottom: -7px;
+  width: 12px;
+  height: 2px;
+  background: var(--sk-label);
+  transform: rotate(38deg);
+  transform-origin: left center;
+}
+
+/* Pestaña de color (TCR, WRC) */
+[data-skin-labels='tab'] .sk-lbl {
+  padding: 2px 10px;
+  border-radius: 3px;
+  background: var(--sk-label);
+  color: var(--ftn-carbono);
+  font-size: 13px;
+  transform: skewX(-10deg);
+}
+
+/* Solo texto (F1) */
+[data-skin-labels='plain'] .sk-lbl {
+  color: var(--sk-label);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+}
+
+/* ── Logo de la categoría ── */
+
+.sk-brand {
+  z-index: 1;
+  justify-self: center;
+  align-self: start;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+.sk-arco .sk-brand {
+  grid-area: tach;
+  margin-top: 24%;
+}
+.sk-barra .sk-brand,
+.sk-tramo .sk-brand {
+  grid-area: gear;
+  margin-top: 14px;
+}
+.sk-brand img {
+  height: 40px;
+  width: auto;
+  max-width: 150px;
+  object-fit: contain;
+}
+.sk-wordmark {
+  font-family: var(--sk-font-display);
+  font-variation-settings: 'wdth' var(--sk-display-wdth);
+  font-weight: 900;
+  font-style: var(--sk-display-style);
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  color: var(--sk-accent);
+}
+
+/* ── Tacómetro en arco ── */
+
+.sk-tach {
+  position: relative;
+  container-type: size;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+}
+.sk-tach-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.sk-tach-track,
+.sk-tach-red,
+.sk-tach-val {
+  fill: none;
+  stroke-width: 24;
+}
+.sk-tach-track {
+  stroke: var(--ftn-grafito);
+}
+.sk-tach-red {
+  stroke: var(--sk-redline);
+  opacity: 0.45;
+}
+.sk-tach-val {
+  stroke: var(--sk-accent);
+}
+.sk-tach-val.over {
+  stroke: var(--sk-redline);
+}
+.sk-tach.flash .sk-tach-val {
+  animation: sk-blink 160ms steps(1) infinite;
+}
+.sk-tach.flash.fast .sk-tach-val {
+  animation-duration: 100ms;
+}
+@keyframes sk-blink {
+  50% {
+    opacity: 0.15;
+  }
+}
+.sk-tach-tick {
+  stroke: var(--ftn-plata);
+  stroke-width: 3;
+}
+.sk-tach-n {
+  fill: var(--ftn-blanco);
+  font-family: var(--sk-font-display);
+  font-weight: 700;
+  font-style: var(--sk-display-style);
+  font-size: 24px;
+}
+.sk-tach-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 6cqmin;
+}
+.sk-gear {
+  font-family: var(--sk-font-display);
+  font-variation-settings: 'wdth' var(--sk-display-wdth);
+  font-weight: 900;
+  font-style: var(--sk-display-style);
+  font-size: 36cqmin;
+  line-height: 0.9;
+  color: var(--ftn-blanco);
+}
+.sk-speed {
+  font-family: var(--sk-font-data);
+  font-weight: var(--sk-data-weight);
+  font-style: var(--sk-data-style);
+  font-variant-numeric: tabular-nums;
+  font-size: 10cqmin;
+  line-height: 1;
+  color: var(--sk-accent);
+}
+.sk-speed small,
+.sk-rpm small {
+  margin-left: 6px;
+  font-size: 0.35em;
+  letter-spacing: 0.1em;
+  color: var(--ftn-niebla);
+  text-transform: uppercase;
+}
+.sk-rpm {
+  position: absolute;
+  bottom: 4%;
+  font-family: var(--sk-font-data);
+  font-weight: var(--sk-data-weight);
+  font-variant-numeric: tabular-nums;
+  font-size: 5cqmin;
+  color: var(--ftn-plata);
+}
+
+/* ── Marcha grande (barra y tramo) ── */
+
+.sk-gearblock {
+  position: relative;
+  container-type: size;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 22px;
+}
+.sk-gearblock .sk-gear {
+  font-size: 72cqh;
+  padding: 0 12px;
+}
+.sk-gearblock.flash .sk-gear {
+  color: var(--sk-redline);
+}
+.sk-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sk-side.right {
+  align-items: flex-end;
+}
+
+.sk-lights {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.sk-live .d2-lights i.b {
+  background: var(--sk-accent);
+}
+.sk-live .d2-lights i.r {
+  background: var(--sk-redline);
+}
+
+/* ── Minimapa ── */
+
+.sk-map {
+  padding: 10px;
+  overflow: hidden;
+  background: var(--ftn-carbono);
+}
+.sk-map-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Mini tabla ── */
+
+.sk-standings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  overflow: hidden;
+}
+.sk-standings ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+}
+.sk-standings li {
+  display: grid;
+  grid-template-columns: 26px 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  height: 23px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.sk-standings li.jump {
+  margin-top: 4px;
+}
+.sk-standings li.me {
+  background: color-mix(in srgb, var(--sk-accent) 22%, transparent);
+  box-shadow: inset 3px 0 0 var(--sk-accent);
+}
+.sk-standings .pos {
+  font-family: var(--sk-font-display);
+  font-weight: 800;
+  font-style: var(--sk-display-style);
+  color: var(--sk-label);
+  text-align: right;
+}
+.sk-standings .num {
+  font-family: var(--ftn-font-data);
+  font-size: 12px;
+  color: var(--ftn-niebla);
+}
+.sk-standings .name {
+  font-family: var(--ftn-font-ui);
+  font-weight: 700;
+  color: var(--ftn-blanco);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sk-standings .gap {
+  font-family: var(--ftn-font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--ftn-plata);
+}
+.sk-standings .pit {
+  padding: 0 6px;
+  border-radius: 3px;
+  font-family: var(--ftn-font-data);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ftn-carbono);
+  background: var(--ftn-alerta);
+}
+
+/* ── Rally ── */
+
+.sk-progress {
+  height: 8px;
+  margin: 6px 0 2px;
+  border-radius: 4px;
+  background: var(--ftn-grafito);
+  overflow: hidden;
+}
+.sk-progress i {
+  display: block;
+  height: 100%;
+  background: var(--sk-accent);
+}
+.sk-warnings {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.sk-warn {
+  font-family: var(--ftn-font-ui);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.25;
+}
+.sk-splits {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-tach.flash .sk-tach-val {
+    animation: none;
+  }
+}
+
+/* ── Selector de skin (encabezado, al lado del simulador) ── */
+
+.d2-skinbtn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--ftn-grafito);
+  background: var(--ftn-carbono-2);
+  color: var(--ftn-blanco);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.d2-skinbtn img {
+  height: 22px;
+  width: auto;
+  max-width: 64px;
+  object-fit: contain;
+}
+.d2-skinbtn[aria-expanded='true'] {
+  border-color: var(--ftn-azul);
+}
+
+.menu.skin-menu {
+  top: 76px;
+  left: 190px;
+  right: auto;
+  bottom: auto;
+  width: 460px;
+}
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.menu .skin-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 86px;
+  padding: 8px;
+  border: 2px solid var(--ftn-grafito);
+  background: var(--sw-bg);
+  text-align: center;
+}
+.menu .skin-grid button[aria-pressed='true'] {
+  border-color: var(--sw-ac);
+}
+.skin-grid img {
+  height: 30px;
+  max-width: 100%;
+  object-fit: contain;
+}
+.skin-grid b {
+  font-family: var(--ftn-font-display);
+  font-size: 24px;
+  font-weight: 900;
+  font-style: oblique 9deg;
+  line-height: 30px;
+  color: var(--sw-ac);
+}
+.menu .skin-grid span,
+.menu .skin-grid button span:last-child {
+  font-size: 12px;
+  color: var(--ftn-plata);
+}
+.skin-credits {
+  margin: 4px 10px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ftn-niebla);
+}
