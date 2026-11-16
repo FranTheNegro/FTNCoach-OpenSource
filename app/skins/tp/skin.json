@@ -1,0 +1,48 @@
+{
+  "$schema": "../skin.schema.json",
+  "name": "Turismo Pista",
+  "short": "TP",
+  "category": "turismo",
+  "template": "arco",
+  "colors": {
+    "background": "#0e0f14",
+    "panel": "#181a22",
+    "line": "#2b2e3a",
+    "text": "#f0f3fa",
+    "muted": "#8f95a6",
+    "accent": "#ff8a1f",
+    "accent2": "#2f6bff",
+    "label": "#ff8a1f",
+    "number": "#f0f3fa",
+    "redline": "#ff4d4d"
+  },
+  "fonts": {
+    "display": {
+      "family": "Archivo Variable",
+      "width": 100,
+      "weight": 800,
+      "italic": true
+    },
+    "data": {
+      "family": "JetBrains Mono Variable",
+      "weight": 700
+    }
+  },
+  "labels": "underline",
+  "logo": null,
+  "credits": "Logo de la APTP / FRAD, usado sin fines de lucro, solo para fans. FTN Coach no tiene relación con la APTP / FRAD.",
+  "fields": [
+    "rpm",
+    "gear",
+    "speed",
+    "lap",
+    "best",
+    "position",
+    "laps",
+    "gap",
+    "fuel",
+    "map",
+    "standings"
+  ],
+  "missing": "dash"
+}
