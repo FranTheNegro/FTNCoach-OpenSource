@@ -5,8 +5,8 @@
  * rally, que el piloto escribe desde la tablet (solo JSON chico, así un sitio de
  * otro origen no puede mandarlas sin el permiso CORS que este servidor no da).
  *
- * Con la red desactivada escucha solo en 127.0.0.1 (lo usa la vista previa de
- * la app de escritorio).
+ * Con la red desactivada escucha solo en 127.0.0.1 (lo usa la app de AC para
+ * pedir lo que el juego no da).
  */
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import { createServer, request, type IncomingMessage, type Server, type ServerResponse } from 'node:http'

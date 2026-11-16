@@ -1,4 +1,4 @@
-import { Eye, FlaskConical, Gauge, Link, Plug, Tablet, Unplug } from 'lucide-react'
+import { FlaskConical, Gauge, Link, Plug, Tablet, Unplug } from 'lucide-react'
 import { SIM_LABEL, sessionLabel } from '@shared/live'
 import { Button, Card, Label, PageHeader, Toggle } from '../components/ui'
 import { useLanState, useLiveState } from '../hooks'
@@ -83,8 +83,8 @@ function TabletCard() {
               {lan.clients === 0
                 ? 'Ningún dispositivo conectado.'
                 : lan.clients === 1
-                  ? '1 pantalla conectada (contando la vista previa).'
-                  : `${lan.clients} pantallas conectadas (contando la vista previa).`}
+                  ? '1 pantalla conectada.'
+                  : `${lan.clients} pantallas conectadas.`}
             </div>
             <Button variant="secondary" onClick={() => void window.ftn.openExternal(url)}>
               Abrir en el navegador
@@ -139,34 +139,15 @@ function DemoCard() {
   )
 }
 
-function Preview() {
-  const [lan] = useLanState(5000)
-  if (!lan?.running) return null
-  return (
-    <Card className="p-0 overflow-hidden">
-      <div className="px-5 pt-4 pb-3 flex items-center justify-between">
-        <Label icon={Eye}>Vista previa</Label>
-        <span className="text-[12px] text-niebla">Lo mismo que ve la tablet</span>
-      </div>
-      <div className="aspect-[16/10] border-t border-grafito">
-        <iframe title="Vista previa del dashboard" src={lan.localUrl} className="w-full h-full border-0 block" />
-      </div>
-    </Card>
-  )
-}
-
 export function LivePage() {
   return (
     <div className="max-w-[1400px]">
       <PageHeader title="En vivo" />
       <div className="space-y-5">
         <SimStatus />
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-5 items-start">
-          <div className="space-y-5">
-            <TabletCard />
-            <DemoCard />
-          </div>
-          <Preview />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+          <TabletCard />
+          <DemoCard />
         </div>
       </div>
     </div>
