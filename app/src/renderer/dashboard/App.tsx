@@ -67,6 +67,8 @@ export function App() {
 
   useEffect(() => applySkin(prefs.skin), [prefs.skin])
   const skin = skinById(prefs.skin)
+  const screens = skin.manifest?.variants ?? []
+  const screen = screens.find((v) => v.template === prefs.variants[skin.id])?.template ?? skin.manifest?.template
 
   const f = live.frame
   const status = live.status
@@ -192,7 +194,7 @@ export function App() {
         onPointerCancel={() => (swipe.current = null)}
       >
         {f && prefs.page === 'live' && skin.manifest && (
-          <CategoryLive skin={skin.manifest} logoUrl={skin.logoUrl} f={f} meta={meta} laps={live.laps} standings={live.standings} units={prefs.units} tracker={tracker} />
+          <CategoryLive skin={skin.manifest} template={screen} logoUrl={skin.logoUrl} f={f} meta={meta} laps={live.laps} standings={live.standings} units={prefs.units} tracker={tracker} />
         )}
         {f && prefs.page === 'live' && !skin.manifest && <Live f={f} meta={meta} laps={live.laps} units={prefs.units} tracker={tracker} history={client.history} layout={layout} panels={prefs.panels} onPanel={(id, i) => setPrefs({ panels: { ...prefs.panels, [id]: i } })} />}
         {f && prefs.page === 'car' && <Car f={f} meta={meta} units={prefs.units} />}
@@ -289,6 +291,18 @@ export function App() {
               ))}
             </div>
           </div>
+          {screens.length > 1 && (
+            <div className="menu-section">
+              <span className="menu-title">Pantalla</span>
+              <div className="menu-choices">
+                {screens.map((v) => (
+                  <button key={v.template} aria-pressed={screen === v.template} onClick={() => setPrefs({ variants: { ...prefs.variants, [skin.id]: v.template } })}>
+                    {v.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {skin.manifest?.credits && <p className="skin-credits">{skin.manifest.credits}</p>}
           <button onClick={() => setSkinMenu(false)}>
             <span>Cerrar</span>

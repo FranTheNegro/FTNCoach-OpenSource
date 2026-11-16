@@ -18,10 +18,12 @@ export interface Prefs {
   skin: string
   /** Qué panel muestra cada zona alternable de "En vivo". */
   panels: Record<string, number>
+  /** Pantalla elegida de cada skin que trae varias (id de skin → plantilla). */
+  variants: Record<string, string>
 }
 
 const KEY = 'ftn.dashboard.prefs'
-const DEFAULTS: Prefs = { units: 'metric', page: 'live', layoutAuto: true, layout: 'gt', skin: 'ftn', panels: {} }
+const DEFAULTS: Prefs = { units: 'metric', page: 'live', layoutAuto: true, layout: 'gt', skin: 'ftn', panels: {}, variants: {} }
 
 function pick<T extends string>(list: readonly T[], v: unknown, fallback: T): T {
   return list.includes(v as T) ? (v as T) : fallback
@@ -39,6 +41,7 @@ function load(): Prefs {
       skin: pick(ALL_SKIN_IDS, stored.skin, DEFAULTS.skin),
       layoutAuto: typeof stored.layoutAuto === 'boolean' ? stored.layoutAuto : DEFAULTS.layoutAuto,
       panels: stored.panels && typeof stored.panels === 'object' ? stored.panels : DEFAULTS.panels,
+      variants: stored.variants && typeof stored.variants === 'object' ? stored.variants : DEFAULTS.variants,
     }
   } catch {
     return DEFAULTS

@@ -108,12 +108,19 @@ funcionan dentro de OpenCode, por eso no aparecen.
 ### Skins por categoría
 
 El dashboard y los overlays de AC tienen skins de TC, TN, TCR, Turismo Pista, F1 y
-WRC, con el estilo de FTN y los colores y el logo de cada categoría. En la tablet se
-eligen con el botón que está al lado del simulador, arriba; en AC, en la página
-*Skin* del centro de control. Cada pantalla recuerda la última elegida. Las de
-circuito muestran rpm, marcha, velocidad, vuelta, mejor vuelta con delta, posición,
-vueltas, gap, nafta, minimapa y una mini tabla de posiciones; la de WRC muestra el
-tramo (tiempo, parciales, distancia y avisos).
+WRC. En la tablet se eligen con el botón que está al lado del simulador, arriba; en
+AC, en la página *Skin* del centro de control. Cada pantalla recuerda la última
+elegida.
+
+- **TC y TN** replican el tablero AD que usa todo el ecosistema ACTC, con dos
+  pantallas como el real: *Carrera* (V. Rápida, Vueltas, Gap, T. Vuelta, Posición,
+  Nafta, mapa y tabla) y *Motor* (presiones de aceite y nafta, batería y
+  temperaturas; esos datos los publica iRacing).
+- **WRC** replica diez tableros de autos de rally: Rally4, Rally3, Franjas, Race,
+  LCD, Rev, Ignition, Analógico, Segmentos y Dorado. Se cambia de pantalla en el
+  mismo menú de la skin.
+- **TCR, Turismo Pista y F1** usan el estilo de FTN con los colores y el logo de la
+  categoría.
 
 ### App dentro de Assetto Corsa
 
@@ -247,7 +254,13 @@ app/skins/
    ```
 
    - `template`: `arco` (tacómetro en arco), `barra` (luces de cambio y marcha
-     grande) o `tramo` (rally).
+     grande) o `tramo` (rally). También las réplicas de tableros reales: `ad-carrera`
+     y `ad-motor` (AD de ACTC) y `wrc-rally4`, `wrc-rally3`, `wrc-franjas`,
+     `wrc-race`, `wrc-lcd`, `wrc-rev`, `wrc-ignicion`, `wrc-analogico`,
+     `wrc-segmentos` y `wrc-dorado`. Las réplicas se dibujan igual que el tablero
+     real y no usan `colors`, `fonts` ni `fields` (esos siguen valiendo para AC).
+   - `variants` (opcional): pantallas para elegir, como
+     `[{ "template": "ad-carrera", "name": "Carrera" }, { "template": "ad-motor", "name": "Motor" }]`.
    - `fields`: qué bloques se ven. Circuito: `rpm`, `gear`, `speed`, `lap`, `best`,
      `position`, `laps`, `gap`, `fuel`, `map`, `standings`. Rally: `stage`,
      `splits`, `distance`, `warnings` (más `rpm`, `gear`, `speed`, `fuel`, `map`).

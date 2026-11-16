@@ -276,6 +276,9 @@ export function irSample(r: RowReader, ctx: IrContext): RawSample {
     trackTempC: r.first('TrackTempCrew', 'TrackTemp'),
     waterTempC: r.num('WaterTemp'),
     oilTempC: r.num('OilTemp'),
+    oilPressBar: r.num('OilPress'),
+    fuelPressBar: r.num('FuelPress'),
+    voltageV: r.num('Voltage'),
     rivals: rivalsOf(r, ctx, ctx.estLapS ?? bestLap ?? lastLap ?? 90),
 
     clockS: r.num('SessionTime') ?? 0,

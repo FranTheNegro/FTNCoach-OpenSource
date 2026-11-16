@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { LapRecord, LiveFrame, SessionMeta, StandingCar, Standings } from '@shared/live'
 import type { Units } from '@shared/api'
-import type { SkinField, SkinManifest } from '@shared/skin'
+import { isReplica, type SkinField, type SkinManifest, type SkinTemplate } from '@shared/skin'
 import type { StageMapData, StageNote } from '@shared/stage'
 import * as fmt from '@ui/format'
 import { TrackMapSvg, type MapMarker } from '@ui/TrackMapSvg'
@@ -15,6 +15,8 @@ import { C, DASH, clamp, signed, thousands } from './kit'
 import { Sector, ShiftLights, shiftState, stageSectors } from './Live'
 import { useTrackMap } from './MapPage'
 import type { DashTracker } from './tracker'
+import { AdDash } from './dash/AdDash'
+import { WrcDash } from './dash/WrcDashes'
 
 interface Props {
   skin: SkinManifest
@@ -25,6 +27,8 @@ interface Props {
   standings: Standings | null
   units: Units
   tracker: DashTracker
+  /** Pantalla elegida entre las de la skin (si no, la principal). */
+  template?: SkinTemplate
 }
 
 type Ctx = Props & { sh: ReturnType<typeof shiftState>; has: (k: SkinField) => boolean }
@@ -455,12 +459,17 @@ function Brand({ c }: { c: Ctx }) {
 
 export function CategoryLive(props: Props) {
   const { skin, f, meta, tracker } = props
+  const t = props.template ?? skin.template
+  if (isReplica(t)) {
+    const p = { f, meta, standings: props.standings, units: props.units, tracker }
+    return <main className="d2-body">{t.startsWith('ad-') ? <AdDash {...p} variant={t === 'ad-motor' ? 'motor' : 'carrera'} /> : <WrcDash {...p} template={t} />}</main>
+  }
   const fields = new Set(skin.fields)
   const c: Ctx = { ...props, sh: shiftState(f.rpm, meta, tracker.seenMaxRpm), has: (k) => fields.has(k) }
-  const t = skin.template
   return (
     <main className={`d2-body sk-live sk-${t}`}>
-      <Brand c={c} />
+      {/* En el arco el logo quedaba de fondo del tacómetro: ahí no va */}
+      {t !== 'arco' && <Brand c={c} />}
       {t === 'arco' ? <ArcTach c={c} /> : <><Lights c={c} />{c.has('gear') && <GearBlock c={c} />}</>}
       {t === 'tramo' ? <StageFields c={c} /> : <CircuitFields c={c} />}
       {c.has('map') && (t === 'tramo' ? <StageMini c={c} /> : <MiniMap c={c} />)}

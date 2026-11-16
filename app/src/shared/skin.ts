@@ -16,8 +16,36 @@ import type { CarCategory } from './category'
  * - barra: luces de cambio arriba, marcha grande y columnas de datos
  * - tramo: rally (tiempo de tramo, parciales, distancia y avisos)
  */
-export const SKIN_TEMPLATES = ['arco', 'barra', 'tramo'] as const
+export const SKIN_TEMPLATES = [
+  'arco',
+  'barra',
+  'tramo',
+  // Réplicas de tableros reales: copian el tablero tal cual, no usan los colores de la skin
+  'ad-carrera',
+  'ad-motor',
+  'wrc-rally4',
+  'wrc-rally3',
+  'wrc-franjas',
+  'wrc-race',
+  'wrc-lcd',
+  'wrc-rev',
+  'wrc-ignicion',
+  'wrc-analogico',
+  'wrc-segmentos',
+  'wrc-dorado',
+] as const
 export type SkinTemplate = (typeof SKIN_TEMPLATES)[number]
+
+/** Las plantillas que replican un tablero real (dibujo propio, a pantalla completa). */
+export function isReplica(t: SkinTemplate): boolean {
+  return t.startsWith('ad-') || t.startsWith('wrc-')
+}
+
+/** Otra pantalla de la misma skin (el tablero real tiene varias). */
+export interface SkinVariant {
+  template: SkinTemplate
+  name: string
+}
 
 /** Bloques que puede mostrar una skin. */
 export const SKIN_FIELDS = [
@@ -84,6 +112,8 @@ export interface SkinManifest {
   /** Categoría del auto para la que está pensada (sugerencia, no obliga). */
   category: CarCategory | null
   template: SkinTemplate
+  /** Pantallas para elegir; la primera es `template`. */
+  variants: SkinVariant[]
   colors: SkinColors
   fonts: {
     /** Marcha, posición y títulos. */
@@ -161,6 +191,12 @@ export function parseSkin(raw: unknown, id: string): SkinManifest | null {
     short: typeof o.short === 'string' && o.short ? o.short : o.name.slice(0, 4).toUpperCase(),
     category: typeof o.category === 'string' ? (o.category as CarCategory) : null,
     template: pick(SKIN_TEMPLATES, o.template, 'arco'),
+    variants: Array.isArray(o.variants)
+      ? o.variants.flatMap((v): SkinVariant[] => {
+          const x = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>
+          return SKIN_TEMPLATES.includes(x.template as SkinTemplate) && typeof x.name === 'string' && x.name ? [{ template: x.template as SkinTemplate, name: x.name }] : []
+        })
+      : [],
     colors,
     fonts: { display: font(fontsIn.display), data: font(fontsIn.data) },
     labels: pick(['underline', 'plain', 'tab'] as const, o.labels, 'plain'),

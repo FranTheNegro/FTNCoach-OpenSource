@@ -13,8 +13,21 @@
       "description": "Categoría de auto para la que está pensada."
     },
     "template": {
-      "enum": ["arco", "barra", "tramo"],
-      "description": "arco: tacómetro en arco con la marcha al centro. barra: luces de cambio arriba y marcha grande. tramo: rally (tiempo de tramo, parciales, distancia y avisos)."
+      "enum": ["arco", "barra", "tramo", "ad-carrera", "ad-motor", "wrc-rally4", "wrc-rally3", "wrc-franjas", "wrc-race", "wrc-lcd", "wrc-rev", "wrc-ignicion", "wrc-analogico", "wrc-segmentos", "wrc-dorado"],
+      "description": "arco: tacómetro en arco con la marcha al centro. barra: luces de cambio arriba y marcha grande. tramo: rally (tiempo de tramo, parciales, distancia y avisos). ad-* y wrc-*: réplicas de tableros reales (dibujo propio, no usan colors ni fonts)."
+    },
+    "variants": {
+      "type": "array",
+      "description": "Otras pantallas para elegir en el selector (el tablero real tiene varias).",
+      "items": {
+        "type": "object",
+        "required": ["template", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "template": { "enum": ["arco", "barra", "tramo", "ad-carrera", "ad-motor", "wrc-rally4", "wrc-rally3", "wrc-franjas", "wrc-race", "wrc-lcd", "wrc-rev", "wrc-ignicion", "wrc-analogico", "wrc-segmentos", "wrc-dorado"] },
+          "name": { "type": "string" }
+        }
+      }
     },
     "colors": {
       "type": "object",

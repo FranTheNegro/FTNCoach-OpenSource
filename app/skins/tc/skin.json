@@ -3,7 +3,11 @@
   "name": "Turismo Carretera",
   "short": "TC",
   "category": "turismo",
-  "template": "arco",
+  "template": "ad-carrera",
+  "variants": [
+    { "template": "ad-carrera", "name": "Carrera" },
+    { "template": "ad-motor", "name": "Motor" }
+  ],
   "colors": {
     "background": "#0d0f13",
     "panel": "#171a20",

@@ -3,7 +3,19 @@
   "name": "WRC",
   "short": "WRC",
   "category": "rally",
-  "template": "tramo",
+  "template": "wrc-rally4",
+  "variants": [
+    { "template": "wrc-rally4", "name": "Rally4" },
+    { "template": "wrc-rally3", "name": "Rally3" },
+    { "template": "wrc-franjas", "name": "Franjas" },
+    { "template": "wrc-race", "name": "Race" },
+    { "template": "wrc-lcd", "name": "LCD" },
+    { "template": "wrc-rev", "name": "Rev" },
+    { "template": "wrc-ignicion", "name": "Ignition" },
+    { "template": "wrc-analogico", "name": "Analógico" },
+    { "template": "wrc-segmentos", "name": "Segmentos" },
+    { "template": "wrc-dorado", "name": "Dorado" }
+  ],
   "colors": {
     "background": "#0e0f12",
     "panel": "#191b20",

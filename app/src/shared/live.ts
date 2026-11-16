@@ -143,6 +143,10 @@ export interface LiveFrame {
   trackTempC: number | null
   waterTempC?: number | null
   oilTempC?: number | null
+  /** Presión de aceite y de nafta (bar) y tensión de la batería (V), si el sim las publica (iRacing). */
+  oilPressBar?: number | null
+  fuelPressBar?: number | null
+  voltageV?: number | null
   /** Autos cercanos (solo iRacing; AC no publica a los rivales). */
   rivals?: Rivals | null
   /** Rally (ACR): el tramo en curso. */
