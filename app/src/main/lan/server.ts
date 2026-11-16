@@ -13,10 +13,11 @@ import { createServer, request, type IncomingMessage, type Server, type ServerRe
 import { networkInterfaces } from 'node:os'
 import { extname, join, normalize, sep } from 'node:path'
 import { WebSocketServer, type WebSocket } from 'ws'
-import { PROTOCOL_VERSION, type EngineStatus, type LapRecord, type LiveFrame, type ServerMessage, type SessionMeta } from '@shared/live'
+import { PROTOCOL_VERSION, type EngineStatus, type LapRecord, type LiveFrame, type ServerMessage, type SessionMeta, type Standings } from '@shared/live'
 import type { TrackMapResult } from '@shared/analysis'
 import type { StageMapData, StageNote } from '@shared/stage'
 import type { TelemetryEngine } from '../telemetry/engine'
+import { parseAcStandings } from '../telemetry/ac/standings'
 
 /** Datos de solo lectura que el servidor pide a la app (mapa del trazado, app de AC). */
 export interface LanApi {
@@ -175,12 +176,15 @@ export class LanServer {
     const onStatus = (status: EngineStatus) => this.broadcast({ type: 'status', status })
     const onMeta = (meta: SessionMeta | null) => this.broadcast({ type: 'meta', meta })
     const onLaps = (laps: LapRecord[]) => this.broadcast({ type: 'laps', laps })
+    const onStandings = (standings: Standings | null) => this.broadcast({ type: 'standings', standings })
     const onFrame = (f: LiveFrame) => this.sendFrame(f)
     this.engine.on('frame', onFrame)
     this.engine.on('status', onStatus)
     this.engine.on('meta', onMeta)
     this.engine.on('laps', onLaps)
+    this.engine.on('standings', onStandings)
     this.unsubscribe = () => {
+      this.engine.off('standings', onStandings)
       this.engine.off('status', onStatus)
       this.engine.off('meta', onMeta)
       this.engine.off('laps', onLaps)
@@ -197,6 +201,7 @@ export class LanServer {
     send({ type: 'status', status: e.status })
     send({ type: 'meta', meta: e.meta })
     send({ type: 'laps', laps: e.tracker.laps })
+    if (e.standings) send({ type: 'standings', standings: e.standings })
     if (e.frame) send({ type: 'frame', frame: e.frame })
     // Los dashboards no mandan nada; cualquier mensaje se ignora
     ws.on('message', () => {})
@@ -240,6 +245,7 @@ export class LanServer {
   private handle(req: IncomingMessage, res: ServerResponse): void {
     const o = this.opts!
     if (req.url?.startsWith('/api/stage-notes')) return this.stageNotes(req, res)
+    if (req.url === '/api/ac/standings') return this.acStandings(req, res)
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405).end()
       return
@@ -302,6 +308,33 @@ export class LanServer {
     })
     if (req.method === 'HEAD') return void res.end()
     createReadStream(file).pipe(res)
+  }
+
+  /**
+   * Clasificación de todos los autos que manda la app Lua de AC. Solo se acepta
+   * desde esta misma PC: desde la red no se puede escribir.
+   */
+  private acStandings(req: IncomingMessage, res: ServerResponse): void {
+    const addr = req.socket.remoteAddress ?? ''
+    const local = addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1'
+    if (!local) return void res.writeHead(403).end()
+    if (req.method !== 'POST') return void res.writeHead(405).end()
+    let body = ''
+    req.setEncoding('utf8')
+    req.on('data', (chunk: string) => {
+      body += chunk
+      if (body.length > 64 * 1024) req.destroy()
+    })
+    req.on('end', () => {
+      try {
+        const parsed = parseAcStandings(JSON.parse(body))
+        if (!parsed) return void res.writeHead(400).end()
+        this.engine.setAcStandings(parsed.input, parsed.focusIdx)
+        res.writeHead(204).end()
+      } catch {
+        res.writeHead(400).end()
+      }
+    })
   }
 
   /** Notas de un tramo: GET las lista, POST agrega una (JSON), DELETE borra una. */

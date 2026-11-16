@@ -7,7 +7,7 @@ import type { RawSample, TelemetrySource } from './types'
 import { IbtFile } from './iracing/ibt'
 import { RowReader } from './iracing/irsdk'
 import { metaFromSessionInfo } from './iracing/session-info'
-import { irSample, type IrContext } from './iracing/normalize'
+import { irSample, StandingsTicker, type IrContext } from './iracing/normalize'
 import { irContext } from './iracing/context'
 
 const CHUNK = 120
@@ -18,6 +18,7 @@ export class IbtReplay implements TelemetrySource {
   private reader: RowReader
   private ctx: IrContext
   private _meta: SessionMeta
+  private standings = new StandingsTicker()
   private firstRow = 0
   private startedAt = 0
   private lastRow = -1
@@ -80,7 +81,7 @@ export class IbtReplay implements TelemetrySource {
     if (row === this.lastRow) return null
     this.lastRow = row
     this.loadRow(row)
-    return irSample(this.reader, this.ctx)
+    return this.standings.attach(irSample(this.reader, this.ctx), this.reader, this.ctx, this._meta.sessionType)
   }
 
   close(): void {

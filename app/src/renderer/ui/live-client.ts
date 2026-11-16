@@ -4,7 +4,7 @@
  * frames por segundo, React dibuja como mucho una vez por refresco de pantalla.
  */
 import { useSyncExternalStore } from 'react'
-import { PROTOCOL_VERSION, type EngineStatus, type LapRecord, type LiveFrame, type ServerMessage, type SessionMeta } from '@shared/live'
+import { PROTOCOL_VERSION, type EngineStatus, type LapRecord, type LiveFrame, type ServerMessage, type SessionMeta, type Standings } from '@shared/live'
 
 export interface LiveSnapshot {
   /** Conectado al servidor de FTN Coach (no implica que haya un sim abierto). */
@@ -15,6 +15,8 @@ export interface LiveSnapshot {
   meta: SessionMeta | null
   frame: LiveFrame | null
   laps: LapRecord[]
+  /** Clasificación de todos los autos (null si el sim no la da). */
+  standings: Standings | null
 }
 
 /** Últimos segundos de pedales, volante y G para los gráficos en vivo. */
@@ -67,7 +69,7 @@ const STALE_MS = 3500
 
 export class LiveClient {
   private ws: WebSocket | null = null
-  private snap: LiveSnapshot = { connected: false, outdated: false, status: null, meta: null, frame: null, laps: [] }
+  private snap: LiveSnapshot = { connected: false, outdated: false, status: null, meta: null, frame: null, laps: [], standings: null }
   private listeners = new Set<() => void>()
   private scheduled = false
   private retry = 500
@@ -118,13 +120,16 @@ export class LiveClient {
         break
       case 'status':
         if (m.status.state === 'waiting') this.history.clear()
-        this.set({ status: m.status, ...(m.status.state === 'waiting' ? { frame: null } : {}) })
+        this.set({ status: m.status, ...(m.status.state === 'waiting' ? { frame: null, standings: null } : {}) })
         break
       case 'meta':
         this.set({ meta: m.meta })
         break
       case 'laps':
         this.set({ laps: m.laps })
+        break
+      case 'standings':
+        this.set({ standings: m.standings })
         break
       case 'frame':
         this.history.push(m.frame)

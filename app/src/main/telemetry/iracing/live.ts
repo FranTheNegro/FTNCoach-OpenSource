@@ -10,7 +10,7 @@ import { SharedMemory } from '../win32'
 import type { RawSample, TelemetrySource } from '../types'
 import { HEADER_SIZE, RowReader, STATUS_CONNECTED, VAR_HEADER_SIZE, parseHeader, parseVarHeaders } from './irsdk'
 import { liveInfoText, metaFromSessionInfo, parseSessionInfo, type SessionInfo } from './session-info'
-import { irSample, type IrContext } from './normalize'
+import { irSample, StandingsTicker, type IrContext } from './normalize'
 import { irContext } from './context'
 
 const MEM_NAME = 'Local\\IRSDKMemMapFileName'
@@ -32,6 +32,7 @@ export class IracingLive implements TelemetrySource {
   private headerBuf = Buffer.alloc(HEADER_SIZE)
   private rowBuf = Buffer.alloc(0)
   private _meta: SessionMeta | null = null
+  private standings = new StandingsTicker()
 
   private constructor(private mem: SharedMemory) {}
 
@@ -87,14 +88,18 @@ export class IracingLive implements TelemetrySource {
       this.infoUpdate = h.sessionInfoUpdate
       const text = liveInfoText(this.mem.read(h.sessionInfoOffset, h.sessionInfoLen))
       // En carrera casi todas las actualizaciones son de resultados: no se vuelve a parsear
-      if (text === this.infoText && sessionNum === this.sessionNum) return irSample(reader, this.ctx)
+      if (text === this.infoText && sessionNum === this.sessionNum) return this.sample(reader)
       this.infoText = text
       this.sessionNum = sessionNum
       this.info = parseSessionInfo(text)
       this.ctx = irContext(this.info, 'iracing', sessionNum)
       this._meta = metaFromSessionInfo(this.info, 'iracing', sessionNum)
     }
-    return irSample(reader, this.ctx)
+    return this.sample(reader)
+  }
+
+  private sample(reader: RowReader): RawSample {
+    return this.standings.attach(irSample(reader, this.ctx), reader, this.ctx, this._meta?.sessionType)
   }
 
   close(): void {

@@ -5,7 +5,8 @@
  */
 import { EventEmitter } from 'node:events'
 import type { Worker } from 'node:worker_threads'
-import type { EngineStatus, LapRecord, LiveFrame, SessionMeta } from '@shared/live'
+import type { EngineStatus, LapRecord, LiveFrame, SessionMeta, Standings } from '@shared/live'
+import { buildStandings, isRaceSession, type StandingInput } from '@shared/standings'
 import type { RawSample } from './types'
 import { LapTracker } from './lap-tracker'
 import type { ReaderCommand, ReaderEvent } from './reader-protocol'
@@ -15,6 +16,7 @@ export interface EngineEvents {
   status: [EngineStatus]
   meta: [SessionMeta | null]
   laps: [LapRecord[]]
+  standings: [Standings | null]
   demo: [string | null]
   /** Cada muestra cruda del sim (para el grabador). */
   sample: [RawSample]
@@ -25,6 +27,9 @@ export class TelemetryEngine extends EventEmitter<EngineEvents> {
   meta: SessionMeta | null = null
   frame: LiveFrame | null = null
   demo: string | null = null
+  standings: Standings | null = null
+  /** Cuándo llegó la última clasificación de la app de AC (ms epoch). */
+  private acStandingsAt = 0
   readonly tracker = new LapTracker()
 
   private worker: Worker | null = null
@@ -111,7 +116,24 @@ export class TelemetryEngine extends EventEmitter<EngineEvents> {
     }
   }
 
+  /**
+   * Clasificación que manda la app Lua de AC (la memoria compartida de AC solo trae
+   * tu auto). Se ignora si no estás en AC.
+   */
+  setAcStandings(input: StandingInput[], focusIdx: number | null): void {
+    if (this.status.sim !== 'ac') return
+    this.acStandingsAt = Date.now()
+    this.setStandings(buildStandings('ac', isRaceSession(this.meta?.sessionType), input, focusIdx))
+  }
+
+  private setStandings(s: Standings | null): void {
+    if (s === null && this.standings === null) return
+    this.standings = s
+    this.emit('standings', s)
+  }
+
   private resetSession(): void {
+    this.setStandings(null)
     this.frame = null
     this.meta = null
     this.tracker.reset()
@@ -149,8 +171,12 @@ export class TelemetryEngine extends EventEmitter<EngineEvents> {
     this.emit('sample', s)
     if (this.tracker.update(s)) this.emit('laps', this.tracker.laps)
 
+    if (s.standings !== undefined) this.setStandings(s.standings)
+    // La app de AC dejó de mandar (se cerró el juego o la app): la clasificación vieja no sirve
+    else if (s.sim === 'ac' && this.standings && Date.now() - this.acStandingsAt > 5000) this.setStandings(null)
+
     const fuelPerLap = this.tracker.fuelPerLap()
-    const { clockS: _c, simDeltaS, offTrack: _o, wheelKmh: _w, suspM: _s, rideHeightM: _r, absActive: _a, ...rest } = s
+    const { clockS: _c, simDeltaS, offTrack: _o, wheelKmh: _w, suspM: _s, rideHeightM: _r, absActive: _a, standings: _st, ...rest } = s
     this.frame = {
       ...rest,
       seq: ++this.seq,

@@ -176,6 +176,47 @@ export interface SessionMeta {
   stageSplitsM?: number[] | null
 }
 
+/** Un auto en la clasificación de la sesión. */
+export interface StandingCar {
+  idx: number
+  /** Número del auto, como lo muestra el sim. */
+  num: string | null
+  name: string
+  cls: string | null
+  position: number
+  /** Vueltas completas. */
+  laps: number
+  /** Posición en la vuelta 0..1 (para el minimapa). */
+  lapPct: number | null
+  /**
+   * En carrera: segundos detrás del líder. En práctica y clasificación: diferencia
+   * de su mejor vuelta con la mejor de la sesión. null si todavía no se sabe.
+   */
+  gapS: number | null
+  /** Lo mismo contra el auto de la posición anterior. */
+  intervalS: number | null
+  /** Vueltas que le saca el líder (0 = en la misma vuelta). */
+  lapsDown: number
+  bestLapS: number | null
+  lastLapS: number | null
+  inPit: boolean
+  me: boolean
+}
+
+/**
+ * Clasificación de todos los autos. iRacing la publica en la telemetría; en AC la
+ * manda la app Lua del juego (la memoria compartida solo trae tu auto).
+ */
+export interface Standings {
+  sim: SimId
+  /** Carrera (gap en tiempo) o práctica/clasificación (gap por mejor vuelta). */
+  race: boolean
+  /** Ordenados por posición. */
+  cars: StandingCar[]
+  /** Auto que sigue la cámara (en una repetición o como espectador puede no ser el tuyo). */
+  focusIdx: number | null
+}
+
 export type LapKind = 'valid' | 'out_lap' | 'in_lap' | 'off_track' | 'incident' | 'partial'
 
 export interface LapRecord {
@@ -205,6 +246,8 @@ export type ServerMessage =
   | { type: 'meta'; meta: SessionMeta | null }
   | { type: 'frame'; frame: LiveFrame }
   | { type: 'laps'; laps: LapRecord[] }
+  /** Clasificación de todos los autos, unas pocas veces por segundo (los clientes viejos la ignoran). */
+  | { type: 'standings'; standings: Standings | null }
   /** Latido cada segundo: el dashboard sabe que la conexión sigue viva aunque no haya frames. */
   | { type: 'ping' }
 

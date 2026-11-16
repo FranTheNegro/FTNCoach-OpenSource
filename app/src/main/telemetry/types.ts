@@ -1,4 +1,4 @@
-import type { LiveFrame, Quad, SessionMeta, SimId } from '@shared/live'
+import type { LiveFrame, Quad, SessionMeta, SimId, Standings } from '@shared/live'
 
 /**
  * Muestra que entrega cada fuente, antes de lo que agrega el motor
@@ -20,6 +20,8 @@ export interface RawSample extends Omit<LiveFrame, 'seq' | 'deltaS' | 'fuelPerLa
   rideHeightM?: [number, number] | null
   /** El ABS está actuando. */
   absActive?: boolean | null
+  /** Clasificación de todos los autos (solo algunas muestras: el motor la publica aparte). */
+  standings?: Standings | null
 }
 
 export interface TelemetrySource {

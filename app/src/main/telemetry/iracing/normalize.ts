@@ -2,7 +2,8 @@
  * Fila irsdk → RawSample. Lo comparten la lectura en vivo y la repetición de .ibt,
  * así el dashboard muestra lo mismo en los dos casos.
  */
-import type { Flag, Quad, RivalCar, Rivals, SimId, Triple } from '@shared/live'
+import type { Flag, Quad, RivalCar, Rivals, SimId, Standings, Triple } from '@shared/live'
+import { buildStandings, isRaceSession, type StandingInput } from '@shared/standings'
 import type { RawSample } from '../types'
 import type { RowReader } from './irsdk'
 
@@ -137,6 +138,58 @@ export function rivalsOf(r: RowReader, ctx: IrContext, lapRefS: number): Rivals 
     cars: [...ahead.slice(0, RIVALS_EACH_SIDE).reverse(), self, ...behind.slice(0, RIVALS_EACH_SIDE)],
     ahead: ahead[0] ?? null,
     behind: behind[0] ?? null,
+  }
+}
+
+/**
+ * Clasificación de todos los autos con los arrays CarIdx del SDK. En carrera el
+ * gap al líder es CarIdxF2Time; en práctica y clasificación se compara la mejor
+ * vuelta. La cámara (CamCarIdx) dice qué auto se está mirando.
+ */
+export function standingsOf(r: RowReader, ctx: IrContext, race: boolean): Standings | null {
+  const drivers = ctx.drivers
+  if (!drivers || !r.has('CarIdxPosition')) return null
+  const me = r.num('PlayerCarIdx')
+  const input: StandingInput[] = []
+  for (const d of drivers.values()) {
+    const pct = r.num('CarIdxLapDistPct', d.idx)
+    const pos = r.num('CarIdxPosition', d.idx)
+    // Sin lugar en la pista ni posición: no está en la sesión (desconectado o en el garage)
+    if ((pct === null || pct < 0) && !(pos !== null && pos > 0)) continue
+    const f2 = r.num('CarIdxF2Time', d.idx)
+    input.push({
+      idx: d.idx,
+      num: d.num,
+      name: d.name,
+      cls: d.cls,
+      position: pos,
+      laps: Math.max(0, r.num('CarIdxLapCompleted', d.idx) ?? 0),
+      lapPct: pct !== null && pct >= 0 ? pct : null,
+      raceGapS: race && f2 !== null && f2 >= 0 ? f2 : null,
+      bestLapS: positive(r.num('CarIdxBestLapTime', d.idx)),
+      lastLapS: positive(r.num('CarIdxLastLapTime', d.idx)),
+      inPit: (r.num('CarIdxOnPitRoad', d.idx) ?? 0) > 0,
+      me: d.idx === me,
+    })
+  }
+  if (!input.length) return null
+  const cam = r.num('CamCarIdx')
+  return buildStandings(ctx.sim, race, input, cam !== null && cam >= 0 ? cam : me)
+}
+
+/** Cada cuánto se arma la clasificación (ms): no hace falta a 60 Hz. */
+const STANDINGS_MS = 250
+
+/** Agrega la clasificación a la muestra unas pocas veces por segundo. */
+export class StandingsTicker {
+  private at = 0
+  attach(s: RawSample, r: RowReader, ctx: IrContext, sessionType: string | null | undefined): RawSample {
+    const now = Date.now()
+    if (now - this.at >= STANDINGS_MS) {
+      this.at = now
+      s.standings = standingsOf(r, ctx, isRaceSession(sessionType))
+    }
+    return s
   }
 }
 
