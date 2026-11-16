@@ -1,0 +1,48 @@
+{
+  "$schema": "../skin.schema.json",
+  "name": "Turismo Carretera",
+  "short": "TC",
+  "category": "turismo",
+  "template": "arco",
+  "colors": {
+    "background": "#0d0f13",
+    "panel": "#171a20",
+    "line": "#2a2f38",
+    "text": "#f0f3fa",
+    "muted": "#8e96a3",
+    "accent": "#ffd21f",
+    "accent2": "#e10600",
+    "label": "#ffd21f",
+    "number": "#fff1a8",
+    "redline": "#ff3b30"
+  },
+  "fonts": {
+    "display": {
+      "family": "Archivo Variable",
+      "width": 75,
+      "weight": 800,
+      "italic": true
+    },
+    "data": {
+      "family": "JetBrains Mono Variable",
+      "weight": 700
+    }
+  },
+  "labels": "underline",
+  "logo": "logo.png",
+  "credits": "Logo de la ACTC, usado sin fines de lucro, solo para fans. FTN Coach no tiene relación con la ACTC.",
+  "fields": [
+    "rpm",
+    "gear",
+    "speed",
+    "lap",
+    "best",
+    "position",
+    "laps",
+    "gap",
+    "fuel",
+    "map",
+    "standings"
+  ],
+  "missing": "dash"
+}
