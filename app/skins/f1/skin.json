@@ -1,0 +1,47 @@
+{
+  "$schema": "../skin.schema.json",
+  "name": "Fórmula 1",
+  "short": "F1",
+  "category": "formula",
+  "template": "barra",
+  "colors": {
+    "background": "#0f0f13",
+    "panel": "#18181e",
+    "line": "#2c2c35",
+    "text": "#ffffff",
+    "muted": "#9a9aa6",
+    "accent": "#e10600",
+    "accent2": "#ffffff",
+    "label": "#9a9aa6",
+    "number": "#ffffff",
+    "redline": "#e10600"
+  },
+  "fonts": {
+    "display": {
+      "family": "Archivo Variable",
+      "width": 125,
+      "weight": 800
+    },
+    "data": {
+      "family": "JetBrains Mono Variable",
+      "weight": 700
+    }
+  },
+  "labels": "plain",
+  "logo": null,
+  "credits": "Logo de Formula One Group, usado sin fines de lucro, solo para fans. FTN Coach no tiene relación con Formula One Group.",
+  "fields": [
+    "rpm",
+    "gear",
+    "speed",
+    "lap",
+    "best",
+    "position",
+    "laps",
+    "gap",
+    "fuel",
+    "map",
+    "standings"
+  ],
+  "missing": "dash"
+}
